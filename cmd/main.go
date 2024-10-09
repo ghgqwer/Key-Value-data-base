@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"homework1/internal/storage"
 	"log"
+	"project_1/internal/storage"
 )
 
 func main() {
