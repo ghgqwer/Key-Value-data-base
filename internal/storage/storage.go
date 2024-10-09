@@ -9,8 +9,7 @@ import (
 type Storage struct {
 	innerString map[string]string
 	innerInt    map[string]string
-	//
-	logger *zap.Logger
+	logger      *zap.Logger
 }
 
 func NewStorage() (Storage, error) {
