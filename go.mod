@@ -1,4 +1,4 @@
-module homework1
+module project_1
 
 go 1.23.1
 
