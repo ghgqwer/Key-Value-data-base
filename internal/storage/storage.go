@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"slices"
 	"strconv"
 
 	"go.uber.org/zap"
@@ -9,6 +10,7 @@ import (
 type Storage struct {
 	innerString map[string]string
 	innerInt    map[string]string
+	innerArray  map[string][]string
 	logger      *zap.Logger
 }
 
@@ -22,8 +24,38 @@ func NewStorage() (Storage, error) {
 	return Storage{
 		innerString: make(map[string]string),
 		innerInt:    make(map[string]string),
+		innerArray:  make(map[string][]string),
 		logger:      logger,
 	}, nil
+}
+
+func (r Storage) Lpush(key string, list []string) []string {
+	defer r.logger.Sync()
+	slices.Reverse(list)
+	if _, ok := r.innerArray[key]; !ok {
+		r.innerArray[key] = list
+		r.logger.Info("List set")
+		return r.innerArray[key]
+	} else {
+		r.innerArray[key] = append(list, r.innerArray[key]...)
+		r.logger.Info("values append in list")
+		return r.innerArray[key]
+	}
+
+}
+
+func (r Storage) Rpush(key string, list []string) []string {
+	defer r.logger.Sync()
+	if _, ok := r.innerArray[key]; !ok {
+		r.innerArray[key] = list
+		r.logger.Info("List set")
+		return r.innerArray[key]
+	} else {
+		r.innerArray[key] = append(list, r.innerArray[key]...)
+		r.logger.Info("values append in list")
+		return r.innerArray[key]
+	}
+
 }
 
 func (r Storage) Set(key string, value string) {
