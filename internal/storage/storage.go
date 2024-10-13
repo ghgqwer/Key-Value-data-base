@@ -29,17 +29,17 @@ func NewStorage() (Storage, error) {
 	}, nil
 }
 
-func (r Storage) Lpush(key string, list []string) []string {
+func (r Storage) Lpush(key string, list []string) []string { //, string
 	defer r.logger.Sync()
 	slices.Reverse(list)
 	if _, ok := r.innerArray[key]; !ok {
 		r.innerArray[key] = list
 		r.logger.Info("List set")
-		return r.innerArray[key]
+		return r.innerArray[key] //, key
 	} else {
 		r.innerArray[key] = append(list, r.innerArray[key]...)
 		r.logger.Info("values append in list")
-		return r.innerArray[key]
+		return r.innerArray[key] //, key
 	}
 
 }
@@ -51,11 +51,31 @@ func (r Storage) Rpush(key string, list []string) []string {
 		r.logger.Info("List set")
 		return r.innerArray[key]
 	} else {
-		r.innerArray[key] = append(list, r.innerArray[key]...)
+		r.innerArray[key] = append(r.innerArray[key], list...)
 		r.logger.Info("values append in list")
 		return r.innerArray[key]
 	}
 
+}
+
+func (r Storage) Raddtoset(key string, list []string) {
+	new_set := make(map[string]struct{})
+	for _, value_set := range r.innerArray[key] {
+		new_set[value_set] = struct{}{}
+	}
+	for _, value := range list {
+		if _, check := new_set[value]; !check {
+			r.innerArray[key] = append(r.innerArray[key], value)
+			new_set[value] = struct{}{}
+			r.logger.Info("New unique value set")
+		}
+
+	}
+	defer r.logger.Sync()
+}
+
+func (r Storage) Check_arr(key string) []string {
+	return r.innerArray[key]
 }
 
 func (r Storage) Set(key string, value string) {
