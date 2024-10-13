@@ -38,7 +38,7 @@ func (r Storage) Lpush(key string, list []string) []string { //, string
 		return r.innerArray[key] //, key
 	} else {
 		r.innerArray[key] = append(list, r.innerArray[key]...)
-		r.logger.Info("values append in list")
+		r.logger.Info("values append in list in left")
 		return r.innerArray[key] //, key
 	}
 
@@ -52,7 +52,7 @@ func (r Storage) Rpush(key string, list []string) []string {
 		return r.innerArray[key]
 	} else {
 		r.innerArray[key] = append(r.innerArray[key], list...)
-		r.logger.Info("values append in list")
+		r.logger.Info("values append in list in right")
 		return r.innerArray[key]
 	}
 
@@ -67,15 +67,49 @@ func (r Storage) Raddtoset(key string, list []string) {
 		if _, check := new_set[value]; !check {
 			r.innerArray[key] = append(r.innerArray[key], value)
 			new_set[value] = struct{}{}
-			r.logger.Info("New unique value set")
-		}
 
+		}
 	}
+	defer r.logger.Info("New unique value set")
 	defer r.logger.Sync()
 }
 
 func (r Storage) Check_arr(key string) []string {
+	defer r.logger.Info("arr sent")
+	defer r.logger.Sync()
 	return r.innerArray[key]
+}
+
+func (r Storage) Lpop(key string, values ...int) []string {
+	defer r.logger.Info("Pop done")
+	defer r.logger.Sync()
+	if len(values) == 1 {
+		end := values[0]
+		if end < 0 {
+			end = len(r.innerArray[key]) + end
+		}
+		deleted := r.innerArray[key][:end]
+		r.innerArray[key] = r.innerArray[key][end:]
+		return deleted
+	} else if len(values) == 2 { //переделать!
+		start := values[0]
+		end := values[1]
+		if start < 0 {
+			start = len(r.innerArray[key]) + start
+		}
+		if end < 0 {
+			end = len(r.innerArray[key]) + end
+		}
+		end += 1
+		if start < 0 || start >= len(r.innerArray[key]) || end <= start || end > len(r.innerArray[key]) {
+			return nil
+		}
+		deleted := make([]string, end-start)
+		copy(deleted, r.innerArray[key][start:end])
+		r.innerArray[key] = append(r.innerArray[key][:start], r.innerArray[key][end:]...)
+		return deleted
+	}
+	return nil
 }
 
 func (r Storage) Set(key string, value string) {
