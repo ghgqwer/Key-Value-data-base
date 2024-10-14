@@ -41,6 +41,24 @@ func NewStorage() (Storage, error) {
 	}, nil
 }
 
+func (r Storage) WriteAtomic(path string) error { //data.json
+	b, err := json.Marshal(r)
+	//dir := filepath.Dir(path)                          //which path of file (directories)
+	filename := filepath.Base(path)                          //return name of file
+	tmpPathName := filepath.Join(root_dict, filename+".tmp") //name of temporary file
+
+	err = os.WriteFile(tmpPathName, b, 0o777)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		os.Remove(tmpPathName)
+	}()
+
+	return os.Rename(tmpPathName, root_dict+path) //mv
+}
+
 func (r *Storage) ReadFromJSON(path string) error {
 	file_path := filepath.Join(root_dict, path)
 	fromFile, err := os.ReadFile(file_path)
