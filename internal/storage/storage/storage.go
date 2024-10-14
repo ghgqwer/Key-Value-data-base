@@ -4,7 +4,6 @@ import (
 	"errors"
 	"project_1/internal/storage/pkg"
 	"slices"
-	"strconv"
 
 	"github.com/gammazero/deque"
 	"go.uber.org/zap"
@@ -12,7 +11,7 @@ import (
 
 type Storage struct {
 	innerString map[string]string
-	innerInt    map[string]string
+	innerInt    map[string]int
 	innerArray  map[string][]string
 	innerDeque  map[string]*deque.Deque[[]string]
 	logger      *zap.Logger
@@ -27,7 +26,7 @@ func NewStorage() (Storage, error) {
 	logger.Info("created new storage")
 	return Storage{
 		innerString: make(map[string]string),
-		innerInt:    make(map[string]string),
+		innerInt:    make(map[string]int),
 		innerArray:  make(map[string][]string),
 		innerDeque:  make(map[string]*deque.Deque[[]string]),
 		logger:      logger,
@@ -194,20 +193,34 @@ func (r Storage) LGet(key string, index int) (string, error) {
 	return r.innerArray[key][index], nil
 }
 
-func (r Storage) Set(key string, value string) {
-	_, errint := strconv.Atoi(value)
+func (r Storage) Set(key string, value interface{}) error {
 
-	if errint == nil {
-		r.innerInt[key] = value
+	switch state := value.(type) {
+	case string:
+		r.innerString[key] = state
 		r.logger.Info("key with int value set")
-	} else {
-		r.innerString[key] = value
+	case int:
+		r.innerInt[key] = state
 		r.logger.Info("key with string value set")
+	default:
+		return errors.New("value must be equal a string or a integer")
+
 	}
 	defer r.logger.Sync()
+	return nil
+	// _, errint := strconv.Atoi(value)
+
+	// if errint == nil {
+	// 	r.innerInt[key] = value
+	// 	r.logger.Info("key with int value set")
+	// } else {
+	// 	r.innerString[key] = value
+	// 	r.logger.Info("key with string value set")
+	// }
+	// defer r.logger.Sync()
 }
 
-func (r Storage) Get(key string) (string, error) {
+func (r Storage) Get(key string) (interface{}, error) {
 	if resint, okint := r.innerInt[key]; okint {
 		return resint, nil
 	} else if resstring, okstring := r.innerString[key]; okstring {
