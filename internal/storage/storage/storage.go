@@ -1,9 +1,11 @@
 package storage
 
 import (
+	"project_1/internal/storage/pkg"
 	"slices"
 	"strconv"
 
+	"github.com/gammazero/deque"
 	"go.uber.org/zap"
 )
 
@@ -11,6 +13,7 @@ type Storage struct {
 	innerString map[string]string
 	innerInt    map[string]string
 	innerArray  map[string][]string
+	innerDeque  map[string]*deque.Deque[[]string]
 	logger      *zap.Logger
 }
 
@@ -25,9 +28,22 @@ func NewStorage() (Storage, error) {
 		innerString: make(map[string]string),
 		innerInt:    make(map[string]string),
 		innerArray:  make(map[string][]string),
+		innerDeque:  make(map[string]*deque.Deque[[]string]),
 		logger:      logger,
 	}, nil
 }
+
+// func (r *Storage) LpushDeque(key string, values []string) {
+// 	defer r.logger.Sync()
+// 	if _, exists := r.innerDeque[key]; !exists {
+// 		r.innerDeque[key] = &deque.Deque[[]string]{}
+// 	}
+// 	r.innerDeque[key].PushBack(values)
+// }
+
+// func (r *Storage) GetDeque(key string) *deque.Deque[[]string] {
+// 	return r.innerDeque[key]
+// }
 
 func (r Storage) Lpush(key string, list []string) []string { //, string
 	defer r.logger.Sync()
@@ -81,7 +97,7 @@ func (r Storage) Check_arr(key string) []string {
 }
 
 func (r Storage) Lpop(key string, values ...int) []string {
-	defer r.logger.Info("Pop done")
+	defer r.logger.Info("LPop done")
 	defer r.logger.Sync()
 	if len(values) == 1 {
 		end := values[0]
@@ -107,6 +123,45 @@ func (r Storage) Lpop(key string, values ...int) []string {
 		deleted := make([]string, end-start)
 		copy(deleted, r.innerArray[key][start:end])
 		r.innerArray[key] = append(r.innerArray[key][:start], r.innerArray[key][end:]...)
+		return deleted
+	}
+	return nil
+}
+
+func (r Storage) Rpop(key string, values ...int) []string {
+	defer r.logger.Info("Rpop done")
+	defer r.logger.Sync()
+	if len(values) == 1 {
+		deleted := r.innerArray[key]
+		start := values[0]
+		end := len(r.innerArray[key])
+		if start < 0 {
+			start = -start
+			deleted = r.innerArray[key][0:start]
+			r.innerArray[key] = r.innerArray[key][start:]
+		} else {
+			start = len(r.innerArray[key]) - start
+			deleted = r.innerArray[key][start:end]
+			r.innerArray[key] = r.innerArray[key][:start]
+		}
+		return deleted
+	} else if len(values) == 2 {
+		start := values[0]
+		end := values[1]
+		if start < 0 {
+			start = -start
+		} else {
+			start = len(r.innerArray[key]) - values[0]
+		}
+		if end < 0 {
+			end = -end - 1
+		} else {
+			end = len(r.innerArray[key]) - values[1]
+		}
+		start_index, end_index := pkg.Min(start, end), pkg.Max(start, end)
+		deleted := make([]string, end_index-start_index)
+		copy(deleted, r.innerArray[key][start_index:end_index])
+		r.innerArray[key] = append(r.innerArray[key][:start_index], r.innerArray[key][end_index:]...)
 		return deleted
 	}
 	return nil
