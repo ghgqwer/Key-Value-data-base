@@ -7,6 +7,7 @@ import (
 )
 
 func main() {
+	//atamarniy operation
 	s, err := storage.NewStorage()
 	if err != nil {
 		log.Fatal(err)
@@ -72,6 +73,11 @@ func main() {
 	res_getkind_unkonown, _ := s.GetKind("unknown")
 	fmt.Println(res_str, res_int, res_unknown_val)
 	fmt.Println(res_getkindstr, res_getkindint, res_getkind_unkonown)
+
+	err = s.WriteAtomic("data.json")
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 //list = [1, 2, 3, 4]
