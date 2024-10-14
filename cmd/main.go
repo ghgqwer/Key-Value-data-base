@@ -11,6 +11,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	s.Rpush("fifth", []string{"1", "2", "3"})
+	fmt.Println(s.LGet("fifth", 0))
+	s.LSet("fifth", 0, "67")
+	mean, _ := s.LGet("fifth", 0)
+	fmt.Println(s.Check_arr("fifth"), mean)
 	// s.Set("string_val", "value1")
 	// s.Set("int_val", "123")
 	// s.Set("", "Val")
@@ -26,7 +32,7 @@ func main() {
 	// fmt.Println(llst, rlst)
 	// s.Raddtoset("second", []string{"3", "5", "8", "4", "8", "6"})
 
-	s.Rpush("third", []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"})
+	// s.Rpush("third", []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"})
 
 	// fmt.Println(s.Check_arr("third"))
 	// fisrt_step := s.Lpop("third", 2)
@@ -35,11 +41,11 @@ func main() {
 	// fmt.Println(second_step)
 	// fmt.Println(s.Check_arr("third"))
 
-	s.Rpush("fourth", []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"})
-	fmt.Println(s.Check_arr("fourth"))
-	first_deleted := s.Rpop("fourth", -4, -2)
-	fmt.Println(first_deleted)
-	fmt.Println(s.Check_arr("fourth"))
+	// s.Rpush("fourth", []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"})
+	// fmt.Println(s.Check_arr("fourth"))
+	// first_deleted := s.Rpop("fourth", 4, -2)
+	// fmt.Println(first_deleted)
+	// fmt.Println(s.Check_arr("fourth"))
 
 	// res_getkindstr := s.GetKind("string_val")
 	// res_getkindint := s.GetKind("int_val")
