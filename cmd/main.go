@@ -13,17 +13,19 @@ func main() {
 	}
 
 	s.Rpush("fifth", []string{"1", "2", "3"})
-	fmt.Println(s.LGet("fifth", 0))
+	check, _ := s.Check_arr("fifth")
+	fmt.Println(check)
+
 	s.LSet("fifth", 0, "67")
-	mean, _ := s.LGet("fifth", 0)
-	fmt.Println(s.Check_arr("fifth"), mean)
+	check, _ = s.Check_arr("fifth")
+	fmt.Println(check)
 	// s.Set("string_val", "value1")
 	// s.Set("int_val", "123")
 	// s.Set("", "Val")
 
-	// res_str := s.Get("string_val")
-	// res_int := s.Get("int_val")
-	// res_unknown_val := s.Get("unknown")
+	// res_str, _ := s.Get("string_val")
+	// res_int, _ := s.Get("int_val")
+	// res_unknown_val, _ := s.Get("unknown")
 
 	// s.Lpush("first", []string{"1", "2", "3"})
 	// llst := s.Lpush("first", []string{"4", "5"})

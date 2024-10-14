@@ -23,7 +23,7 @@ func TestSetGet(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			s.Set(c.key, c.value)
-			sValue := s.Get(c.key)
+			sValue, _ := s.Get(c.key)
 
 			if sValue != c.value {
 				t.Errorf("values not equal")
@@ -54,7 +54,7 @@ func TestGetKind(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			s.Set(c.key, c.value)
-			sValueKind := s.GetKind(c.key)
+			sValueKind, _ := s.GetKind(c.key)
 
 			if sValueKind != c.kind {
 				t.Errorf("kinds not equal")

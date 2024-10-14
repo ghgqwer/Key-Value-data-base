@@ -91,92 +91,100 @@ func (r Storage) Raddtoset(key string, list []string) {
 	defer r.logger.Sync()
 }
 
-func (r Storage) Check_arr(key string) []string {
+func (r Storage) Check_arr(key string) ([]string, error) {
 	defer r.logger.Info("arr sent")
 	defer r.logger.Sync()
-	return r.innerArray[key]
+	if _, err := r.innerArray[key]; err {
+		return r.innerArray[key], nil
+	}
+	return nil, errors.New("key does not exist")
 }
 
-func (r Storage) Lpop(key string, values ...int) []string {
+func (r Storage) Lpop(key string, values ...int) ([]string, error) {
 	defer r.logger.Info("LPop done")
 	defer r.logger.Sync()
-	if len(values) == 1 {
-		end := values[0]
-		if end < 0 {
-			end = len(r.innerArray[key]) + end
+	if _, err := r.innerArray[key]; err {
+		if len(values) == 1 {
+			end := values[0]
+			if end < 0 {
+				end = len(r.innerArray[key]) + end
+			}
+			deleted := r.innerArray[key][:end]
+			r.innerArray[key] = r.innerArray[key][end:]
+			return deleted, nil
+		} else if len(values) == 2 { //переделать!
+			start := values[0]
+			end := values[1]
+			if start < 0 {
+				start = len(r.innerArray[key]) + start
+			}
+			if end < 0 {
+				end = len(r.innerArray[key]) + end
+			}
+			end += 1
+			if start < 0 || start >= len(r.innerArray[key]) || end <= start || end > len(r.innerArray[key]) {
+				return nil, errors.New("index does not exit")
+			}
+			deleted := make([]string, end-start)
+			copy(deleted, r.innerArray[key][start:end])
+			r.innerArray[key] = append(r.innerArray[key][:start], r.innerArray[key][end:]...)
+			return deleted, nil
 		}
-		deleted := r.innerArray[key][:end]
-		r.innerArray[key] = r.innerArray[key][end:]
-		return deleted
-	} else if len(values) == 2 { //переделать!
-		start := values[0]
-		end := values[1]
-		if start < 0 {
-			start = len(r.innerArray[key]) + start
-		}
-		if end < 0 {
-			end = len(r.innerArray[key]) + end
-		}
-		end += 1
-		if start < 0 || start >= len(r.innerArray[key]) || end <= start || end > len(r.innerArray[key]) {
-			return nil
-		}
-		deleted := make([]string, end-start)
-		copy(deleted, r.innerArray[key][start:end])
-		r.innerArray[key] = append(r.innerArray[key][:start], r.innerArray[key][end:]...)
-		return deleted
 	}
-	return nil
+	return nil, errors.New("key does not exit")
 }
 
-func (r Storage) Rpop(key string, values ...int) []string {
+func (r Storage) Rpop(key string, values ...int) ([]string, error) {
 	defer r.logger.Info("Rpop done")
 	defer r.logger.Sync()
-	if len(values) == 1 {
-		deleted := r.innerArray[key]
-		start := values[0]
-		end := len(r.innerArray[key])
-		if start < 0 {
-			start = -start
-			deleted = r.innerArray[key][0:start]
-			r.innerArray[key] = r.innerArray[key][start:]
-		} else {
-			start = len(r.innerArray[key]) - start
-			deleted = r.innerArray[key][start:end]
-			r.innerArray[key] = r.innerArray[key][:start]
+	if _, err := r.innerArray[key]; err {
+		if len(values) == 1 {
+			deleted := r.innerArray[key]
+			start := values[0]
+			end := len(r.innerArray[key])
+			if start < 0 {
+				start = -start
+				deleted = r.innerArray[key][0:start]
+				r.innerArray[key] = r.innerArray[key][start:]
+			} else {
+				start = len(r.innerArray[key]) - start
+				deleted = r.innerArray[key][start:end]
+				r.innerArray[key] = r.innerArray[key][:start]
+			}
+			return deleted, nil
+		} else if len(values) == 2 {
+			start := values[0]
+			end := values[1]
+			if start < 0 {
+				start = -start
+			} else {
+				start = len(r.innerArray[key]) - values[0]
+			}
+			if end < 0 {
+				end = -end - 1
+			} else {
+				end = len(r.innerArray[key]) - values[1]
+			}
+			start_index, end_index := pkg.Min(start, end), pkg.Max(start, end)
+			deleted := make([]string, end_index-start_index)
+			copy(deleted, r.innerArray[key][start_index:end_index])
+			r.innerArray[key] = append(r.innerArray[key][:start_index], r.innerArray[key][end_index:]...)
+			return deleted, nil
 		}
-		return deleted
-	} else if len(values) == 2 {
-		start := values[0]
-		end := values[1]
-		if start < 0 {
-			start = -start
-		} else {
-			start = len(r.innerArray[key]) - values[0]
-		}
-		if end < 0 {
-			end = -end - 1
-		} else {
-			end = len(r.innerArray[key]) - values[1]
-		}
-		start_index, end_index := pkg.Min(start, end), pkg.Max(start, end)
-		deleted := make([]string, end_index-start_index)
-		copy(deleted, r.innerArray[key][start_index:end_index])
-		r.innerArray[key] = append(r.innerArray[key][:start_index], r.innerArray[key][end_index:]...)
-		return deleted
 	}
-	return nil
+
+	return nil, errors.New("key does not exist")
 }
 
 func (r Storage) LSet(key string, index int, element string) (string, error) {
-	// if _, err := r.innerArray[key]; !err {
-	// 	return "", errors.New("key does not exist")
-	// }
-	if index < 0 || index > len(r.innerArray[key]) {
-		return "", errors.New("key does not exist")
+	if _, err := r.innerArray[key]; err {
+		if index < 0 || index > len(r.innerArray[key]) {
+			return "", errors.New("index does not exist")
+		}
+		r.innerArray[key][index] = element
+		return "OK", nil
 	}
-	r.innerArray[key][index] = element
-	return "OK", nil
+	return "", errors.New("key does not exist")
 }
 
 func (r Storage) LGet(key string, index int) (string, error) {
@@ -199,24 +207,24 @@ func (r Storage) Set(key string, value string) {
 	defer r.logger.Sync()
 }
 
-func (r Storage) Get(key string) string {
+func (r Storage) Get(key string) (string, error) {
 	if resint, okint := r.innerInt[key]; okint {
-		return resint
+		return resint, nil
 	} else if resstring, okstring := r.innerString[key]; okstring {
-		return resstring
+		return resstring, nil
 	}
 	defer r.logger.Sync()
-	return ""
+	return "", errors.New("key does not exist")
 }
 
-func (r Storage) GetKind(key string) interface{} {
+func (r Storage) GetKind(key string) (interface{}, error) {
 	defer r.logger.Sync()
 	if _, okint := r.innerInt[key]; okint {
 		r.logger.Info("key D sent")
-		return "D"
+		return "D", nil
 	} else if _, okstring := r.innerString[key]; okstring {
 		r.logger.Info("key S sent")
-		return "S"
+		return "S", nil
 	}
-	return nil
+	return "", errors.New("key does not exist")
 }
