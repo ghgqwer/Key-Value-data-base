@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"project_1/internal/storage/pkg"
 	"slices"
 	"strconv"
@@ -165,6 +166,24 @@ func (r Storage) Rpop(key string, values ...int) []string {
 		return deleted
 	}
 	return nil
+}
+
+func (r Storage) LSet(key string, index int, element string) (string, error) {
+	// if _, err := r.innerArray[key]; !err {
+	// 	return "", errors.New("key does not exist")
+	// }
+	if index < 0 || index > len(r.innerArray[key]) {
+		return "", errors.New("key does not exist")
+	}
+	r.innerArray[key][index] = element
+	return "OK", nil
+}
+
+func (r Storage) LGet(key string, index int) (string, error) {
+	if index < 0 || index > len(r.innerArray[key]) {
+		return "", errors.New("key does not exist")
+	}
+	return r.innerArray[key][index], nil
 }
 
 func (r Storage) Set(key string, value string) {
