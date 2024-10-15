@@ -1,9 +1,19 @@
-<strong>Benchmark results</strong>
+<strong>Comments in codereview</strong>
 
-BenchmarkGet - 0.0000005 ns/op        0 B/op    
+<ul>
 
-BenchmarkSet - 0.0000183 ns/op        0 B/op    
+<li>md file add</li>
+<li>standard min/max add</li>
+<li>deque delete</li>
+<li>some useless defers delete</li>
+<li> <s>snake_case</s> -> CamelCase</li>
+<li>uint type add</li>
+<li>func Get change</li>
+<li>Benchmarks change</li>
+<li>one key = some (both) values change</li>
+<li>names in tests and benchmarks change</li>
 
-BenchmarkSetGet - 0.0000170 ns/op        0 B/op 
+</ul>
 
-AllBenchmarks - 0.0000292 ns/op        0 B/op  
+<strong>Questions</strong>
+1 ...int может принимать n значений (вроде функция работает корректно)

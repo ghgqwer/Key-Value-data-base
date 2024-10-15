@@ -1,18 +1,20 @@
 package storage
 
-import "testing"
+import (
+	"strconv"
+	"testing"
+)
 
 type testCase struct {
-	name  string
 	key   string
 	value string
 }
 
 func TestSetGet(t *testing.T) {
 	cases := []testCase{
-		{"first", "key1", "string_value"},
-		{"second", "key2", "123"},
-		{"third", "key3", ""},
+		{"key1", "string_value"},
+		{"key2", "123"},
+		{"key3", ""},
 	}
 
 	s, err := NewStorage()
@@ -20,8 +22,8 @@ func TestSetGet(t *testing.T) {
 		t.Errorf("new storage: %v", err)
 	}
 
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
+	for numb, c := range cases {
+		t.Run(strconv.Itoa(numb), func(t *testing.T) {
 			s.Set(c.key, c.value)
 			sValue, _ := s.Get(c.key)
 
@@ -33,7 +35,6 @@ func TestSetGet(t *testing.T) {
 }
 
 type TestCaseGetKind struct {
-	name  string
 	key   string
 	value interface{}
 	kind  string
@@ -41,9 +42,9 @@ type TestCaseGetKind struct {
 
 func TestGetKind(t *testing.T) {
 	cases := []TestCaseGetKind{
-		{"first", "key1", "string_value", "S"},
-		{"second", "key2", 23, "D"},
-		{"third", "key3", "", "S"},
+		{"key1", "string_value", "S"},
+		{"key2", 23, "D"},
+		{"key3", "", "S"},
 	}
 
 	s, err := NewStorage()
@@ -51,8 +52,8 @@ func TestGetKind(t *testing.T) {
 		t.Errorf("new storage: %v", err)
 	}
 
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
+	for numb, c := range cases {
+		t.Run(strconv.Itoa(numb), func(t *testing.T) {
 			s.Set(c.key, c.value)
 			sValueKind, _ := s.GetKind(c.key)
 
@@ -64,24 +65,23 @@ func TestGetKind(t *testing.T) {
 }
 
 type benchmarkSetGet struct {
-	name  string
 	key   string
 	value string
 }
 
 func BenchmarkGet(b *testing.B) {
 	case_BenchmarkGet := []benchmarkSetGet{
-		{"first", "key1", "value1"},
-		{"second", "key2", "123"},
-		{"third", "key3", ""},
-	}
-	s, err := NewStorage()
-	if err != nil {
-		b.Errorf("new storage: %v", err)
+		{"key1", "value1"},
+		{"key2", "123"},
+		{"key3", ""},
 	}
 
-	for _, tCase := range case_BenchmarkGet {
-		b.Run(tCase.name, func(bb *testing.B) {
+	for numb, tCase := range case_BenchmarkGet {
+		b.Run(strconv.Itoa(numb), func(bb *testing.B) {
+			s, err := NewStorage()
+			if err != nil {
+				b.Errorf("new storage: %v", err)
+			}
 			s.Set(tCase.key, tCase.value)
 			bb.ResetTimer()
 			for n := 0; n < b.N; n++ {
@@ -93,13 +93,13 @@ func BenchmarkGet(b *testing.B) {
 
 func BenchmarkSet(b *testing.B) {
 	case_BenchmarkGet := []benchmarkSetGet{
-		{"first", "key1", "value1"},
-		{"second", "key2", "123"},
-		{"third", "key3", ""},
+		{"key1", "value1"},
+		{"key2", "123"},
+		{"key3", ""},
 	}
 
-	for _, tCase := range case_BenchmarkGet {
-		b.Run(tCase.name, func(bb *testing.B) {
+	for numb, tCase := range case_BenchmarkGet {
+		b.Run(strconv.Itoa(numb), func(bb *testing.B) {
 			s, err := NewStorage()
 			if err != nil {
 				b.Errorf("new storage: %v", err)
@@ -113,18 +113,18 @@ func BenchmarkSet(b *testing.B) {
 
 func BenchmarkSetGet(b *testing.B) {
 	case_BenchmarkGet := []benchmarkSetGet{
-		{"first", "key1", "value1"},
-		{"second", "key2", "123"},
-		{"third", "key3", ""},
-	}
-	s, err := NewStorage()
-	if err != nil {
-		b.Errorf("new storage: %v", err)
+		{"key1", "value1"},
+		{"key2", "123"},
+		{"key3", ""},
 	}
 
-	for _, tCase := range case_BenchmarkGet {
-		b.Run(tCase.name, func(bb *testing.B) {
+	for numb, tCase := range case_BenchmarkGet {
+		b.Run(strconv.Itoa(numb), func(bb *testing.B) {
 			bb.ResetTimer()
+			s, err := NewStorage()
+			if err != nil {
+				b.Errorf("new storage: %v", err)
+			}
 			for n := 0; n < b.N; n++ {
 				s.Set(tCase.key, tCase.value)
 				s.Get(tCase.key)
