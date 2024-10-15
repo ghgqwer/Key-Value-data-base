@@ -35,14 +35,14 @@ func TestSetGet(t *testing.T) {
 type TestCaseGetKind struct {
 	name  string
 	key   string
-	value string
+	value interface{}
 	kind  string
 }
 
 func TestGetKind(t *testing.T) {
 	cases := []TestCaseGetKind{
 		{"first", "key1", "string_value", "S"},
-		{"second", "key2", "23", "D"},
+		{"second", "key2", 23, "D"},
 		{"third", "key3", "", "S"},
 	}
 
@@ -97,14 +97,13 @@ func BenchmarkSet(b *testing.B) {
 		{"second", "key2", "123"},
 		{"third", "key3", ""},
 	}
-	s, err := NewStorage()
-	if err != nil {
-		b.Errorf("new storage: %v", err)
-	}
 
 	for _, tCase := range case_BenchmarkGet {
 		b.Run(tCase.name, func(bb *testing.B) {
-			bb.ResetTimer()
+			s, err := NewStorage()
+			if err != nil {
+				b.Errorf("new storage: %v", err)
+			}
 			for n := 0; n < b.N; n++ {
 				s.Set(tCase.key, tCase.value)
 			}

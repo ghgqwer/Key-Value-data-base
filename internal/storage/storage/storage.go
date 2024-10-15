@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
-	"project_1/internal/storage/pkg"
 	"slices"
 
-	"github.com/gammazero/deque"
 	"go.uber.org/zap"
 )
 
@@ -21,7 +20,7 @@ type Storage struct {
 	InnerString map[string]string
 	InnerInt    map[string]int
 	InnerArray  map[string][]string
-	innerDeque  map[string]*deque.Deque[[]string]
+	InnerKeys   map[string]struct{}
 	logger      *zap.Logger
 }
 
@@ -36,13 +35,16 @@ func NewStorage() (Storage, error) {
 		InnerString: make(map[string]string),
 		InnerInt:    make(map[string]int),
 		InnerArray:  make(map[string][]string),
-		innerDeque:  make(map[string]*deque.Deque[[]string]),
+		InnerKeys:   make(map[string]struct{}),
 		logger:      logger,
 	}, nil
 }
 
 func (r Storage) WriteAtomic(path string) error { //data.json
 	b, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
 	//dir := filepath.Dir(path)                          //which path of file (directories)
 	filename := filepath.Base(path)                          //return name of file
 	tmpPathName := filepath.Join(root_dict, filename+".tmp") //name of temporary file
@@ -111,23 +113,13 @@ func (r *Storage) SaveToJSON(path string) error {
 	return nil
 }
 
-// func (r *Storage) LpushDeque(key string, values []string) {
-// 	defer r.logger.Sync()
-// 	if _, exists := r.innerDeque[key]; !exists {
-// 		r.innerDeque[key] = &deque.Deque[[]string]{}
-// 	}
-// 	r.innerDeque[key].PushBack(values)
-// }
-
-// func (r *Storage) GetDeque(key string) *deque.Deque[[]string] {
-// 	return r.innerDeque[key]
-// }
-
-func (r Storage) Lpush(key string, list []string) []string { //, string
+func (r *Storage) Lpush(key string, list []string) []string { //, string
 	defer r.logger.Sync()
 	slices.Reverse(list)
+
 	if _, ok := r.InnerArray[key]; !ok {
 		r.InnerArray[key] = list
+		r.InnerKeys[key] = struct{}{}
 		r.logger.Info("List set")
 		return r.InnerArray[key] //, key
 	} else {
@@ -135,13 +127,13 @@ func (r Storage) Lpush(key string, list []string) []string { //, string
 		r.logger.Info("values append in list in left")
 		return r.InnerArray[key] //, key
 	}
-
 }
 
 func (r Storage) Rpush(key string, list []string) []string {
 	defer r.logger.Sync()
 	if _, ok := r.InnerArray[key]; !ok {
 		r.InnerArray[key] = list
+		r.InnerKeys[key] = struct{}{}
 		r.logger.Info("List set")
 		return r.InnerArray[key]
 	} else {
@@ -149,28 +141,22 @@ func (r Storage) Rpush(key string, list []string) []string {
 		r.logger.Info("values append in list in right")
 		return r.InnerArray[key]
 	}
-
 }
 
 func (r Storage) Raddtoset(key string, list []string) {
-	new_set := make(map[string]struct{})
+	NewSet := make(map[string]struct{})
 	for _, value_set := range r.InnerArray[key] {
-		new_set[value_set] = struct{}{}
+		NewSet[value_set] = struct{}{}
 	}
 	for _, value := range list {
-		if _, check := new_set[value]; !check {
+		if _, check := NewSet[value]; !check {
 			r.InnerArray[key] = append(r.InnerArray[key], value)
-			new_set[value] = struct{}{}
-
+			NewSet[value] = struct{}{}
 		}
 	}
-	defer r.logger.Info("New unique value set")
-	defer r.logger.Sync()
 }
 
 func (r Storage) Check_arr(key string) ([]string, error) {
-	defer r.logger.Info("arr sent")
-	defer r.logger.Sync()
 	if _, err := r.InnerArray[key]; err {
 		return r.InnerArray[key], nil
 	}
@@ -182,6 +168,11 @@ func (r Storage) Lpop(key string, values ...int) ([]string, error) {
 	defer r.logger.Sync()
 	if _, err := r.InnerArray[key]; err {
 		if len(values) == 1 {
+			if int(math.Abs(float64(values[0]))) > len(r.InnerArray[key]) {
+				deleted := r.InnerArray[key]
+				r.InnerArray[key] = nil
+				return deleted, nil
+			}
 			end := values[0]
 			if end < 0 {
 				end = len(r.InnerArray[key]) + end
@@ -189,7 +180,13 @@ func (r Storage) Lpop(key string, values ...int) ([]string, error) {
 			deleted := r.InnerArray[key][:end]
 			r.InnerArray[key] = r.InnerArray[key][end:]
 			return deleted, nil
-		} else if len(values) == 2 { //переделать!
+		} else if len(values) == 2 {
+			if int(math.Abs(float64(values[0])))+int(math.Abs(float64(values[1]))) >
+				len(r.InnerArray[key]) {
+				deleted := r.InnerArray[key]
+				r.InnerArray[key] = nil
+				return deleted, nil
+			}
 			start := values[0]
 			end := values[1]
 			if start < 0 {
@@ -242,22 +239,22 @@ func (r Storage) Rpop(key string, values ...int) ([]string, error) {
 			} else {
 				end = len(r.InnerArray[key]) - values[1]
 			}
-			start_index, end_index := pkg.Min(start, end), pkg.Max(start, end)
+			start_index, end_index := min(start, end), max(start, end)
 			deleted := make([]string, end_index-start_index)
 			copy(deleted, r.InnerArray[key][start_index:end_index])
 			r.InnerArray[key] = append(r.InnerArray[key][:start_index], r.InnerArray[key][end_index:]...)
 			return deleted, nil
 		}
+		return nil, errors.New("key does not exit")
 	}
-
 	return nil, errors.New("key does not exist")
 }
 
-func (r Storage) LSet(key string, index int, element string) (string, error) {
+func (r Storage) LSet(key string, index uint64, element string) (string, error) {
+	if int(index) > len(r.InnerArray[key]) {
+		return "", errors.New("index out of range")
+	}
 	if _, err := r.InnerArray[key]; err {
-		if index < 0 || index > len(r.InnerArray[key]) {
-			return "", errors.New("index does not exist")
-		}
 		r.InnerArray[key][index] = element
 		return "OK", nil
 	}
@@ -271,31 +268,25 @@ func (r Storage) LGet(key string, index int) (string, error) {
 	return r.InnerArray[key][index], nil
 }
 
-func (r Storage) Set(key string, value interface{}) error {
-
-	switch state := value.(type) {
-	case string:
-		r.InnerString[key] = state
-		r.logger.Info("key with int value set")
-	case int:
-		r.InnerInt[key] = state
-		r.logger.Info("key with string value set")
-	default:
-		return errors.New("value must be equal a string or a integer")
-
-	}
+func (r *Storage) Set(key string, value interface{}) error {
+	//при существуеющем ключе ничего не делать
 	defer r.logger.Sync()
-	return nil
-	// _, errint := strconv.Atoi(value)
+	if !r.CheckKeys(key) {
+		switch state := value.(type) {
+		case string:
+			r.InnerString[key] = state
+			r.InnerKeys[key] = struct{}{}
+			r.logger.Info("key with int value set")
+		case int:
+			r.InnerInt[key] = state
+			r.InnerKeys[key] = struct{}{}
+			r.logger.Info("key with string value set")
+		default:
+			return errors.New("value must be equal a string or a integer")
 
-	// if errint == nil {
-	// 	r.InnerInt[key] = value
-	// 	r.logger.Info("key with int value set")
-	// } else {
-	// 	r.innerString[key] = value
-	// 	r.logger.Info("key with string value set")
-	// }
-	// defer r.logger.Sync()
+		}
+	}
+	return errors.New("keys existed")
 }
 
 func (r Storage) Get(key string) (interface{}, error) {
@@ -319,3 +310,19 @@ func (r Storage) GetKind(key string) (interface{}, error) {
 	}
 	return "", errors.New("key does not exist")
 }
+
+func (r Storage) CheckKeys(key string) bool {
+	_, exist := r.InnerKeys[key]
+	return exist
+}
+
+// _, errint := strconv.Atoi(value)
+
+// if errint == nil {
+// 	r.InnerInt[key] = value
+// 	r.logger.Info("key with int value set")
+// } else {
+// 	r.innerString[key] = value
+// 	r.logger.Info("key with string value set")
+// }
+// defer r.logger.Sync()

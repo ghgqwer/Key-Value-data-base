@@ -24,6 +24,7 @@ func main() {
 	}()
 
 	s.Set("name", "Anton")
+	s.Set("name", "Vadim")
 	fmt.Println(s.Get("name"))
 
 	fmt.Println(s.Get("pue"))
@@ -32,19 +33,9 @@ func main() {
 	fmt.Println(s.Get("key1"))
 
 	s.Rpush("fifth", []string{"1", "2", "3"})
-	check, _ := s.Check_arr("fifth")
-	fmt.Println(check)
-
+	fmt.Println(s.Check_arr("fifth"))
 	s.LSet("fifth", 0, "67")
-	check, _ = s.Check_arr("fifth")
-	fmt.Println(check)
-	s.Set("string_val", "value1")
-	s.Set("int_val", "123")
-	s.Set("", "Val")
-
-	res_str, _ := s.Get("string_val")
-	res_int, _ := s.Get("int_val")
-	res_unknown_val, _ := s.Get("unknown")
+	fmt.Println(s.Check_arr("fifth"))
 
 	s.Lpush("first", []string{"1", "2", "3"})
 	llst := s.Lpush("first", []string{"4", "5"})
@@ -68,6 +59,13 @@ func main() {
 	fmt.Println(first_deleted)
 	fmt.Println(s.Check_arr("fourth"))
 
+	s.Set("string_val", "value1")
+	s.Set("int_val", 123)
+	s.Set("", "Val")
+
+	res_str, _ := s.Get("string_val")
+	res_int, _ := s.Get("int_val")
+	res_unknown_val, _ := s.Get("unknown")
 	res_getkindstr, _ := s.GetKind("string_val")
 	res_getkindint, _ := s.GetKind("int_val")
 	res_getkind_unkonown, _ := s.GetKind("unknown")
@@ -78,6 +76,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 }
 
 //list = [1, 2, 3, 4]
