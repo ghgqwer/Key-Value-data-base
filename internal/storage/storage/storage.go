@@ -40,14 +40,13 @@ func NewStorage() (Storage, error) {
 	}, nil
 }
 
-func (r Storage) WriteAtomic(path string) error { //data.json
+func (r Storage) WriteAtomic(path string) error { 
 	b, err := json.Marshal(r)
 	if err != nil {
 		return err
-	}
-	//dir := filepath.Dir(path)                          //which path of file (directories)
-	filename := filepath.Base(path)                          //return name of file
-	tmpPathName := filepath.Join(root_dict, filename+".tmp") //name of temporary file
+	}                          
+	filename := filepath.Base(path)                         
+	tmpPathName := filepath.Join(root_dict, filename+".tmp") 
 
 	err = os.WriteFile(tmpPathName, b, 0o777)
 	if err != nil {
@@ -58,7 +57,7 @@ func (r Storage) WriteAtomic(path string) error { //data.json
 		os.Remove(tmpPathName)
 	}()
 
-	return os.Rename(tmpPathName, root_dict+path) //mv
+	return os.Rename(tmpPathName, root_dict+path) 
 }
 
 func (r *Storage) ReadFromJSON(path string) error {
@@ -73,47 +72,36 @@ func (r *Storage) ReadFromJSON(path string) error {
 		return err
 	}
 
-	// decoder := json.NewDecoder(file)
-	// err = decoder.Decode(r.InnerString)
-	// if err != nil {
-	// 	return err
-	// }
-
 	r.logger.Info("json file read")
 	return nil
 }
 
 func (r *Storage) SaveToJSON(path string) error {
 	file_path := filepath.Join(root_dict, path)
-	file, err := os.Create(file_path) // open file
+	file, err := os.Create(file_path)
 	if err != nil {
 		fmt.Println("Error creating file", err)
 		return err
 	}
 	defer file.Close()
 
-	b, err := json.Marshal(r) //read data
+	b, err := json.Marshal(r) 
 	if err != nil {
 		fmt.Println("Error write file", err)
 		return err
 	}
 
-	err = os.WriteFile(file_path, b, 0o777) // write data in file
+	err = os.WriteFile(file_path, b, 0o777)
 	if err != nil {
 		fmt.Println("Error write file", err)
 		return err
 	}
 
-	//encoder := json.NewEncoder(file)
-	// err = encoder.Encode(r)
-	// if err != nil {
-	// 	return err
-	// }
 	r.logger.Info("json file saved")
 	return nil
 }
 
-func (r *Storage) Lpush(key string, list []string) []string { //, string
+func (r *Storage) Lpush(key string, list []string) []string { 
 	defer r.logger.Sync()
 	slices.Reverse(list)
 
@@ -121,11 +109,11 @@ func (r *Storage) Lpush(key string, list []string) []string { //, string
 		r.InnerArray[key] = list
 		r.InnerKeys[key] = struct{}{}
 		r.logger.Info("List set")
-		return r.InnerArray[key] //, key
+		return r.InnerArray[key]
 	} else {
 		r.InnerArray[key] = append(list, r.InnerArray[key]...)
 		r.logger.Info("values append in list in left")
-		return r.InnerArray[key] //, key
+		return r.InnerArray[key] 
 	}
 }
 
@@ -315,14 +303,3 @@ func (r Storage) CheckKeys(key string) bool {
 	_, exist := r.InnerKeys[key]
 	return exist
 }
-
-// _, errint := strconv.Atoi(value)
-
-// if errint == nil {
-// 	r.InnerInt[key] = value
-// 	r.logger.Info("key with int value set")
-// } else {
-// 	r.innerString[key] = value
-// 	r.logger.Info("key with string value set")
-// }
-// defer r.logger.Sync()
