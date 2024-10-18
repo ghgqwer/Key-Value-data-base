@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	root_dict = "/Users/vadim/Desktop/golang/third lesson /BolshoiGolangProject"
+	Root_dict = "/Users/vadim/Desktop/golang/fifth lesson/BolshoiGolangProject"
 )
 
 type Storage struct {
@@ -47,7 +47,7 @@ func (r Storage) WriteAtomic(path string) error {
 		return err
 	}
 	filename := filepath.Base(path)
-	tmpPathName := filepath.Join(root_dict, filename+".tmp")
+	tmpPathName := filepath.Join(Root_dict, filename+".tmp")
 
 	err = os.WriteFile(tmpPathName, b, 0o777)
 	if err != nil {
@@ -58,11 +58,11 @@ func (r Storage) WriteAtomic(path string) error {
 		os.Remove(tmpPathName)
 	}()
 
-	return os.Rename(tmpPathName, root_dict+path)
+	return os.Rename(tmpPathName, Root_dict+path)
 }
 
 func (r *Storage) ReadFromJSON(path string) error {
-	file_path := filepath.Join(root_dict, path)
+	file_path := filepath.Join(Root_dict, path)
 	fromFile, err := os.ReadFile(file_path)
 	if err != nil {
 		return r.SaveToJSON(path)
@@ -78,7 +78,7 @@ func (r *Storage) ReadFromJSON(path string) error {
 }
 
 func (r *Storage) SaveToJSON(path string) error {
-	file_path := filepath.Join(root_dict, path)
+	file_path := filepath.Join(Root_dict, path)
 	file, err := os.Create(file_path)
 	if err != nil {
 		fmt.Println("Error creating file", err)

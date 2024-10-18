@@ -36,8 +36,10 @@ func (r *Server) newApi() *gin.Engine {
 		ctx.JSON(http.StatusOK, "Working! ^^")
 	})
 
-	engine.PUT("/scalar/set/:key", r.handlerSet)
+	engine.POST("/scalar/set/:key", r.handlerSet)
 	engine.GET("/scalar/get/:key", r.handlerGet)
+
+	//engine.POST("")
 
 	return engine
 }
@@ -53,6 +55,7 @@ func (r *Server) handlerSet(ctx *gin.Context) {
 	}
 
 	r.storage.Set(key, v.Value)
+	r.storage.SaveToJSON("data.json")
 	ctx.Status(http.StatusOK)
 }
 
