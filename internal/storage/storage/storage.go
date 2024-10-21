@@ -152,7 +152,7 @@ func (r Storage) Check_arr(key string) ([]string, error) {
 	return nil, errors.New("key does not exist")
 }
 
-func (r Storage) Lpop(key string, values ...int) ([]string, error) {
+func (r Storage) Lpop(key string, values []int) ([]string, error) {
 	defer r.logger.Info("LPop done")
 	defer r.logger.Sync()
 	if _, err := r.InnerArray[key]; err {
@@ -197,7 +197,7 @@ func (r Storage) Lpop(key string, values ...int) ([]string, error) {
 	return nil, errors.New("key does not exit")
 }
 
-func (r Storage) Rpop(key string, values ...int) ([]string, error) {
+func (r Storage) Rpop(key string, values []int) ([]string, error) {
 	defer r.logger.Info("Rpop done")
 	defer r.logger.Sync()
 	if _, err := r.InnerArray[key]; err {
@@ -258,7 +258,6 @@ func (r Storage) LGet(key string, index int) (string, error) {
 }
 
 func (r *Storage) Set(key string, value interface{}) error {
-	//при существуеющем ключе ничего не делать
 	defer r.logger.Sync()
 	if !r.CheckKeys(key) {
 		switch state := value.(type) {
