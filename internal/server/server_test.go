@@ -1,47 +1,122 @@
 package server
 
 import (
-	// "bytes"
-	// "encoding/json"
+	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"project_1/internal/storage/storage"
 	"testing"
 
-	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 type HandlerGet struct {
-	Name string `json:"name"`
+	Value string `json:"value"`
 }
 
-func testGet(ctx *gin.Context) {
-	ctx.String(http.StatusOK, "ok")
-}
-
-// func testSet(ctx *gin.Context) {
-
-// }
-func testRequests() *gin.Engine {
-	r := gin.Default()
-	r.GET("/scalar/get/fisrt", testGet)
-	return r
+func NewStorageTest() storage.Storage {
+	logger, err := zap.NewProduction()
+	if err != nil {
+		return storage.Storage{}
+	}
+	return storage.Storage{
+		InnerString: make(map[string]string),
+		InnerInt:    make(map[string]int),
+		InnerArray:  make(map[string][]string),
+		InnerKeys:   make(map[string]struct{}),
+		Logger:      logger,
+	}
 }
 
 func TestHandlerGet(t *testing.T) {
-	router := testRequests()
+	s := NewStorageTest()
+	s.Set("testKey", "testValue")
 
-	w := httptest.NewRecorder()
+	recorder := httptest.NewRecorder()
+	server := New("localhost:8080", &s)
+	router := server.newApi()
 
-	//requestBody := HandlerGet{Name: "first"}
-	// jsonData, err := json.Marshal(requestBody)
-	// if err != nil {
-	// 	t.Errorf("new request: %v", err)
-	// }
+	req, _ := http.NewRequest(http.MethodGet, "/scalar/get/testKey", nil)
+	router.ServeHTTP(recorder, req)
 
-	req, _ := http.NewRequest(http.MethodGet, "/scalar/get/fisrt", nil)
-	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, recorder.Code)
 
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, "ok", w.Body.String())
+	var response HandlerGet
+
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Errorf("json: %v", err)
+	}
+
+	assert.Equal(t, "testValue", response.Value)
+}
+
+func TestHandlerSet(t *testing.T) {
+	s := NewStorageTest()
+
+	recorder := httptest.NewRecorder()
+	server := New("localhost:8080", &s)
+	router := server.newApi()
+
+	data := map[string]string{
+		"key":   "testKey",
+		"value": "testValue",
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		t.Errorf("marshal json: %v", err)
+	}
+
+	req, _ := http.NewRequest(http.MethodPost,
+		"/scalar/set/"+data["key"],
+		bytes.NewBuffer(jsonData))
+	router.ServeHTTP(recorder, req)
+
+	assert.Equal(t, http.StatusOK, recorder.Code)
+
+	if _, err := s.Get(data["key"]); err != nil {
+		t.Errorf("value doesnt exist: %v", err)
+	}
+}
+
+//create recorder
+//create server
+//create router
+
+//create request
+//write down response
+//assert
+
+func TestRpushArr(t *testing.T) {
+	s := NewStorageTest()
+	recorder := httptest.NewRecorder()
+	server := New("localhost:8080", &s)
+	router := server.newApi()
+
+	type data struct {
+		Key  string
+		List []string
+	}
+
+	testData := data{
+		Key:  "testLpush",
+		List: []string{"1", "2", "3"},
+	}
+
+	jsonData, err := json.Marshal(testData)
+	if err != nil {
+		t.Errorf("marshal json: %v", err)
+	}
+	req, _ := http.NewRequest(http.MethodPost,
+		"/array/Lpush/testLpush",
+		bytes.NewBuffer(jsonData))
+	router.ServeHTTP(recorder, req)
+
+	assert.Equal(t, http.StatusOK, recorder.Code)
+
+	if _, err := s.Check_arr("testLpush"); err != nil {
+		t.Errorf("%v", err)
+	}
 }

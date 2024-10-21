@@ -39,8 +39,8 @@ func (r *Server) newApi() *gin.Engine {
 		ctx.JSON(http.StatusOK, "Working! ^^")
 	})
 
-	engine.POST("/scalar/set/:key", r.handlerSet)
-	engine.GET("/scalar/get/:key", r.handlerGet)
+	engine.POST("/scalar/set/:key", r.HandlerSet)
+	engine.GET("/scalar/get/:key", r.HandlerGet)
 
 	engine.POST("/array/Lpush/:key", r.handlerArrLpush)     //+
 	engine.POST("array/Rpush/:key", r.handlerArrRpush)      //+
@@ -49,7 +49,7 @@ func (r *Server) newApi() *gin.Engine {
 	engine.POST("array/Rpop/:key", r.handlerRpopArr)        //+
 	engine.POST("array/LSet/:key", r.handlerArrLSet)        //+
 	engine.GET("array/LGet/:key", r.handlerArrLGet)         //+
-	engine.GET("/array/get_arr/:key", r.handlerArrGet)      //+
+	engine.GET("/array/getArr/:key", r.handlerArrGet)       //+
 
 	return engine
 }
@@ -173,7 +173,7 @@ func (r *Server) handlerArrGet(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, Entry{List: v})
 }
 
-func (r *Server) handlerSet(ctx *gin.Context) {
+func (r *Server) HandlerSet(ctx *gin.Context) {
 	key := ctx.Param("key")
 
 	var v Entry
@@ -188,7 +188,7 @@ func (r *Server) handlerSet(ctx *gin.Context) {
 	ctx.Status(http.StatusOK)
 }
 
-func (r *Server) handlerGet(ctx *gin.Context) {
+func (r *Server) HandlerGet(ctx *gin.Context) {
 	key := ctx.Param("key")
 
 	v, err := r.storage.Get(key)

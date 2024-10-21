@@ -22,22 +22,22 @@ type Storage struct {
 	InnerInt    map[string]int
 	InnerArray  map[string][]string
 	InnerKeys   map[string]struct{}
-	logger      *zap.Logger
+	Logger      *zap.Logger
 }
 
 func NewStorage() (Storage, error) {
-	logger, err := zap.NewProduction()
+	Logger, err := zap.NewProduction()
 	if err != nil {
 		return Storage{}, err
 	}
-	defer logger.Sync()
-	logger.Info("created new storage")
+	defer Logger.Sync()
+	Logger.Info("created new storage")
 	return Storage{
 		InnerString: make(map[string]string),
 		InnerInt:    make(map[string]int),
 		InnerArray:  make(map[string][]string),
 		InnerKeys:   make(map[string]struct{}),
-		logger:      logger,
+		Logger:      Logger,
 	}, nil
 }
 
@@ -73,7 +73,7 @@ func (r *Storage) ReadFromJSON(path string) error {
 		return err
 	}
 
-	r.logger.Info("json file read")
+	r.Logger.Info("json file read")
 	return nil
 }
 
@@ -98,36 +98,36 @@ func (r *Storage) SaveToJSON(path string) error {
 		return err
 	}
 
-	r.logger.Info("json file saved")
+	r.Logger.Info("json file saved")
 	return nil
 }
 
 func (r *Storage) Lpush(key string, list []string) []string {
-	defer r.logger.Sync()
+	defer r.Logger.Sync()
 	slices.Reverse(list)
 
 	if _, ok := r.InnerArray[key]; !ok {
 		r.InnerArray[key] = list
 		r.InnerKeys[key] = struct{}{}
-		r.logger.Info("List set")
+		r.Logger.Info("List set")
 		return r.InnerArray[key]
 	} else {
 		r.InnerArray[key] = append(list, r.InnerArray[key]...)
-		r.logger.Info("values append in list in left")
+		r.Logger.Info("values append in list in left")
 		return r.InnerArray[key]
 	}
 }
 
 func (r Storage) Rpush(key string, list []string) []string {
-	defer r.logger.Sync()
+	defer r.Logger.Sync()
 	if _, ok := r.InnerArray[key]; !ok {
 		r.InnerArray[key] = list
 		r.InnerKeys[key] = struct{}{}
-		r.logger.Info("List set")
+		r.Logger.Info("List set")
 		return r.InnerArray[key]
 	} else {
 		r.InnerArray[key] = append(r.InnerArray[key], list...)
-		r.logger.Info("values append in list in right")
+		r.Logger.Info("values append in list in right")
 		return r.InnerArray[key]
 	}
 }
@@ -153,8 +153,8 @@ func (r Storage) Check_arr(key string) ([]string, error) {
 }
 
 func (r Storage) Lpop(key string, values []int) ([]string, error) {
-	defer r.logger.Info("LPop done")
-	defer r.logger.Sync()
+	defer r.Logger.Info("LPop done")
+	defer r.Logger.Sync()
 	if _, err := r.InnerArray[key]; err {
 		if len(values) == 1 {
 			if int(math.Abs(float64(values[0]))) > len(r.InnerArray[key]) {
@@ -198,8 +198,8 @@ func (r Storage) Lpop(key string, values []int) ([]string, error) {
 }
 
 func (r Storage) Rpop(key string, values []int) ([]string, error) {
-	defer r.logger.Info("Rpop done")
-	defer r.logger.Sync()
+	defer r.Logger.Info("Rpop done")
+	defer r.Logger.Sync()
 	if _, err := r.InnerArray[key]; err {
 		if len(values) == 1 {
 			deleted := r.InnerArray[key]
@@ -258,17 +258,18 @@ func (r Storage) LGet(key string, index int) (string, error) {
 }
 
 func (r *Storage) Set(key string, value interface{}) error {
-	defer r.logger.Sync()
+	defer r.Logger.Sync()
+	//defer r.SaveToJSON("data.json")
 	if !r.CheckKeys(key) {
 		switch state := value.(type) {
 		case string:
 			r.InnerString[key] = state
 			r.InnerKeys[key] = struct{}{}
-			r.logger.Info("key with int value set")
+			r.Logger.Info("key with int value set")
 		case int:
 			r.InnerInt[key] = state
 			r.InnerKeys[key] = struct{}{}
-			r.logger.Info("key with string value set")
+			r.Logger.Info("key with string value set")
 		default:
 			return errors.New("value must be equal a string or a integer")
 
@@ -283,17 +284,17 @@ func (r Storage) Get(key string) (string, error) {
 	} else if resstring, okstring := r.InnerString[key]; okstring {
 		return resstring, nil
 	}
-	defer r.logger.Sync()
+	defer r.Logger.Sync()
 	return "", errors.New("key does not exist")
 }
 
 func (r Storage) GetKind(key string) (interface{}, error) {
-	defer r.logger.Sync()
+	defer r.Logger.Sync()
 	if _, okint := r.InnerInt[key]; okint {
-		r.logger.Info("key D sent")
+		r.Logger.Info("key D sent")
 		return "D", nil
 	} else if _, okstring := r.InnerString[key]; okstring {
-		r.logger.Info("key S sent")
+		r.Logger.Info("key S sent")
 		return "S", nil
 	}
 	return "", errors.New("key does not exist")

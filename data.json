@@ -1,1 +1,1 @@
-{"InnerString":{"first_set":"nuhai"},"InnerInt":{},"InnerArray":{"first_arr":["-2","-1","0","2","3","4","5","left1","left2"],"train":["10","2","3","4"]},"InnerKeys":{"first_arr":{},"first_set":{},"train":{}}}
+{"InnerString":{},"InnerInt":{},"InnerArray":{"testLpush":["3","2","1"]},"InnerKeys":{"testLpush":{}},"Logger":{}}
