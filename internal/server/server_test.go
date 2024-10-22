@@ -184,6 +184,10 @@ func TestLpop(t *testing.T) {
 	}
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
+	value, _ := s.LGet(testData.Key, testData.ListInt[0])
+	if value != "2" {
+		t.Errorf("value doesnt delete: %v", err)
+	}
 } //check Pop
 
 //create recorder
