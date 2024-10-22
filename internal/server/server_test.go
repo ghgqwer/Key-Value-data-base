@@ -16,6 +16,18 @@ type HandlerGet struct {
 	Value string `json:"value"`
 }
 
+// type dataString {
+// 	Key string
+// 	Value string
+// }
+
+type dataList struct {
+	Key     string
+	Value   string
+	List    []string
+	ListInt []int
+}
+
 func NewStorageTest() storage.Storage {
 	logger, err := zap.NewProduction()
 	if err != nil {
@@ -59,9 +71,9 @@ func TestHandlerSet(t *testing.T) {
 	server := New("localhost:8080", &s)
 	router := server.newApi()
 
-	data := map[string]string{
-		"key":   "testKey",
-		"value": "testValue",
+	data := dataList{
+		Key:   "testKey",
+		Value: "testValue",
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -70,24 +82,16 @@ func TestHandlerSet(t *testing.T) {
 	}
 
 	req, _ := http.NewRequest(http.MethodPost,
-		"/scalar/set/"+data["key"],
+		"/scalar/set/"+data.Key,
 		bytes.NewBuffer(jsonData))
 	router.ServeHTTP(recorder, req)
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
-	if _, err := s.Get(data["key"]); err != nil {
+	if _, err := s.Get(data.Key); err != nil {
 		t.Errorf("value doesnt exist: %v", err)
 	}
 }
-
-//create recorder
-//create server
-//create router
-
-//create request
-//write down response
-//assert
 
 func TestRpushArr(t *testing.T) {
 	s := NewStorageTest()
@@ -95,12 +99,7 @@ func TestRpushArr(t *testing.T) {
 	server := New("localhost:8080", &s)
 	router := server.newApi()
 
-	type data struct {
-		Key  string
-		List []string
-	}
-
-	testData := data{
+	testData := dataList{
 		Key:  "testLpush",
 		List: []string{"1", "2", "3"},
 	}
@@ -110,7 +109,7 @@ func TestRpushArr(t *testing.T) {
 		t.Errorf("marshal json: %v", err)
 	}
 	req, _ := http.NewRequest(http.MethodPost,
-		"/array/Lpush/testLpush",
+		"/array/Lpush/"+testData.Key,
 		bytes.NewBuffer(jsonData))
 	router.ServeHTTP(recorder, req)
 
@@ -120,3 +119,77 @@ func TestRpushArr(t *testing.T) {
 		t.Errorf("%v", err)
 	}
 }
+
+func TestRaddtoset(t *testing.T) {
+	s := NewStorageTest()
+	recorder := httptest.NewRecorder()
+	server := New("localhost:8080", &s)
+	router := server.newApi()
+
+	s.Rpush("testRaddtoset", []string{"1", "2"})
+
+	testData := dataList{
+		Key:  "testRaddtoset",
+		List: []string{"1", "2", "3"},
+	}
+
+	jsonData, err := json.Marshal(testData)
+	if err != nil {
+		t.Errorf("marshal err: %v", err)
+	}
+
+	req, _ := http.NewRequest(http.MethodPost,
+		"/array/Raddtoset/"+testData.Key,
+		bytes.NewBuffer(jsonData))
+	router.ServeHTTP(recorder, req)
+
+	assert.Equal(t, http.StatusOK, recorder.Code)
+
+	arr, err := s.Check_arr(testData.Key)
+	if err != nil {
+		t.Errorf("key doesnt exist: %v", err)
+	}
+	if len(arr) != 3 { //magic numb(
+		t.Errorf("req doesnt work")
+	}
+}
+
+func TestLpop(t *testing.T) {
+	s := NewStorageTest()
+
+	recorder := httptest.NewRecorder()
+	server := New("localhost:8080", &s)
+	router := server.newApi()
+
+	testData := dataList{
+		Key:     "testPop",
+		List:    []string{"1", "2", "3"},
+		ListInt: []int{1},
+	}
+
+	s.Lpush(testData.Key, testData.List)
+
+	jsonData, err := json.Marshal(testData)
+	if err != nil {
+		t.Errorf("marshal err: %v", err)
+	}
+
+	req, _ := http.NewRequest(http.MethodPost,
+		"/array/Lpop/"+testData.Key,
+		bytes.NewBuffer(jsonData))
+	router.ServeHTTP(recorder, req)
+
+	if _, err := s.Check_arr(testData.Key); err != nil {
+		t.Errorf("key doesnt exist: %v", err)
+	}
+
+	assert.Equal(t, http.StatusOK, recorder.Code)
+} //check Pop
+
+//create recorder
+//create server
+//create router
+
+//create request
+//write down response
+//assert
