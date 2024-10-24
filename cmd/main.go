@@ -15,6 +15,14 @@ func main() {
 		panic(err)
 	}
 
+	// fmt.Println(store.Lpush("first", []string{"1", "2", "3"}, 10))
+	// fmt.Println(store.Rpush("first", []string{"1", "2", "3"}, 0))
+	// store.Raddtoset("first", []string{"1", "7"})
+	// fmt.Println(store.Check_arr("first"))
+	// //store.Raddtoset("first", []string{"1", "7", "123"})
+	// store.LSet("first", 0, "19")
+	// fmt.Println(store.LGet("first", 0))
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 

@@ -14,13 +14,24 @@ import (
 )
 
 var (
-	Root_dict = "/Users/vadim/Desktop/golang/fifth lesson/BolshoiGolangProject"
+	Root_dict = "/Users/vadim/Desktop/golang/sixth lessson/BolshoiGolangProject"
 )
 
+const deafultExpireTime = int64(-1)
+
+type Scalar struct {
+	Value    string `json:"value"`
+	ExpireAt int64  `json:"expireAt"`
+}
+
+type Array struct {
+	Values   []string `json:"values"`
+	ExpireAt int64    `json:"expireAt"`
+}
+
 type Storage struct {
-	InnerString map[string]string
-	InnerInt    map[string]int
-	InnerArray  map[string][]string
+	InnerScalar map[string]Scalar
+	InnerArray  map[string]Array
 	InnerKeys   map[string]struct{}
 	Logger      *zap.Logger
 }
@@ -33,9 +44,8 @@ func NewStorage() (Storage, error) {
 	defer Logger.Sync()
 	Logger.Info("created new storage")
 	return Storage{
-		InnerString: make(map[string]string),
-		InnerInt:    make(map[string]int),
-		InnerArray:  make(map[string][]string),
+		InnerScalar: make(map[string]Scalar),
+		InnerArray:  make(map[string]Array),
 		InnerKeys:   make(map[string]struct{}),
 		Logger:      Logger,
 	}, nil
@@ -102,136 +112,170 @@ func (r *Storage) SaveToJSON(path string) error {
 	return nil
 }
 
-func (r *Storage) Lpush(key string, list []string) []string {
+func (r *Storage) Lpush(key string, list []string, expireTime int64) []string {
 	defer r.Logger.Sync()
 	slices.Reverse(list)
-
 	if _, ok := r.InnerArray[key]; !ok {
-		r.InnerArray[key] = list
+		if expireTime == 0 {
+			r.InnerArray[key] = Array{
+				Values:   list,
+				ExpireAt: deafultExpireTime,
+			}
+		} else {
+			r.InnerArray[key] = Array{
+				Values:   list,
+				ExpireAt: expireTime,
+			}
+		}
 		r.InnerKeys[key] = struct{}{}
 		r.Logger.Info("List set")
-		return r.InnerArray[key]
+		return r.InnerArray[key].Values
 	} else {
-		r.InnerArray[key] = append(list, r.InnerArray[key]...)
-		r.Logger.Info("values append in list in left")
-		return r.InnerArray[key]
+		currentArray := r.InnerArray[key]
+		currentArray.Values = append(list, currentArray.Values...)
+		r.InnerArray[key] = currentArray
+		//r.InnerArray[key].Values = append(list, r.InnerArray[key].Values...)
+		r.Logger.Info("Values append in list in left")
+		return r.InnerArray[key].Values
 	}
 }
 
-func (r Storage) Rpush(key string, list []string) []string {
+func (r Storage) Rpush(key string, list []string, expireTime int64) []string {
+
 	defer r.Logger.Sync()
 	if _, ok := r.InnerArray[key]; !ok {
-		r.InnerArray[key] = list
+		if expireTime == 0 {
+			r.InnerArray[key] = Array{
+				Values:   list,
+				ExpireAt: deafultExpireTime,
+			}
+		} else {
+			r.InnerArray[key] = Array{
+				Values:   list,
+				ExpireAt: expireTime,
+			}
+		}
 		r.InnerKeys[key] = struct{}{}
 		r.Logger.Info("List set")
-		return r.InnerArray[key]
+		return r.InnerArray[key].Values
 	} else {
-		r.InnerArray[key] = append(r.InnerArray[key], list...)
-		r.Logger.Info("values append in list in right")
-		return r.InnerArray[key]
+		currentArray := r.InnerArray[key]
+		currentArray.Values = append(currentArray.Values, list...)
+		r.InnerArray[key] = currentArray
+		//r.InnerArray[key].Values = append(list, r.InnerArray[key].Values...)
+		r.Logger.Info("Values append in list in left")
+		return r.InnerArray[key].Values
 	}
 }
 
 func (r Storage) Raddtoset(key string, list []string) {
 	NewSet := make(map[string]struct{})
-	for _, value_set := range r.InnerArray[key] {
+	for _, value_set := range r.InnerArray[key].Values {
 		NewSet[value_set] = struct{}{}
 	}
-	for _, value := range list {
-		if _, check := NewSet[value]; !check {
-			r.InnerArray[key] = append(r.InnerArray[key], value)
-			NewSet[value] = struct{}{}
+	for _, Value := range list {
+		if _, check := NewSet[Value]; !check {
+			currentArray := r.InnerArray[key]
+			currentArray.Values = append(currentArray.Values, Value)
+			r.InnerArray[key] = currentArray
 		}
 	}
 }
 
-func (r Storage) Check_arr(key string) ([]string, error) {
+func (r Storage) Check_arr(key string) ([]string, int64, error) {
 	if _, err := r.InnerArray[key]; err {
-		return r.InnerArray[key], nil
+		return r.InnerArray[key].Values, r.InnerArray[key].ExpireAt, nil
 	}
-	return nil, errors.New("key does not exist")
+	return nil, 0, errors.New("key does not exist")
 }
 
-func (r Storage) Lpop(key string, values []int) ([]string, error) {
+func (r Storage) Lpop(key string, Values []int) ([]string, error) {
 	defer r.Logger.Info("LPop done")
 	defer r.Logger.Sync()
-	if _, err := r.InnerArray[key]; err {
-		if len(values) == 1 {
-			if int(math.Abs(float64(values[0]))) > len(r.InnerArray[key]) {
-				deleted := r.InnerArray[key]
-				r.InnerArray[key] = nil
+	if array, err := r.InnerArray[key]; err {
+		if len(Values) == 1 {
+			if int(math.Abs(float64(Values[0]))) > len(r.InnerArray[key].Values) {
+				deleted := array.Values
+				array.Values = nil
+				r.InnerArray[key] = array
 				return deleted, nil
 			}
-			end := values[0]
+			end := Values[0]
 			if end < 0 {
-				end = len(r.InnerArray[key]) + end
+				end = len(r.InnerArray[key].Values) + end
 			}
-			deleted := r.InnerArray[key][:end]
-			r.InnerArray[key] = r.InnerArray[key][end:]
+			deleted := array.Values[:end]
+			array.Values = array.Values[end:]
+			r.InnerArray[key] = array
 			return deleted, nil
-		} else if len(values) == 2 {
-			if int(math.Abs(float64(values[0])))+int(math.Abs(float64(values[1]))) >
-				len(r.InnerArray[key]) {
-				deleted := r.InnerArray[key]
-				r.InnerArray[key] = nil
+		} else if len(Values) == 2 {
+			if int(math.Abs(float64(Values[0])))+int(math.Abs(float64(Values[1]))) >
+				len(array.Values) {
+				deleted := array.Values
+				array.Values = nil
+				r.InnerArray[key] = array
 				return deleted, nil
 			}
-			start := values[0]
-			end := values[1]
+			start := Values[0]
+			end := Values[1]
 			if start < 0 {
-				start = len(r.InnerArray[key]) + start
+				start = len(array.Values) + start
 			}
 			if end < 0 {
-				end = len(r.InnerArray[key]) + end
+				end = len(array.Values) + end
 			}
 			end += 1
-			if start < 0 || start >= len(r.InnerArray[key]) || end <= start || end > len(r.InnerArray[key]) {
+			if start < 0 || start >= len(array.Values) || end <= start || end > len(array.Values) {
 				return nil, errors.New("index does not exit")
 			}
 			deleted := make([]string, end-start)
-			copy(deleted, r.InnerArray[key][start:end])
-			r.InnerArray[key] = append(r.InnerArray[key][:start], r.InnerArray[key][end:]...)
+			copy(deleted, array.Values[start:end])
+			array.Values = append(array.Values[:start], array.Values[end:]...)
+			r.InnerArray[key] = array
 			return deleted, nil
 		}
 	}
 	return nil, errors.New("key does not exit")
 }
 
-func (r Storage) Rpop(key string, values []int) ([]string, error) {
+func (r Storage) Rpop(key string, Values []int) ([]string, error) {
 	defer r.Logger.Info("Rpop done")
 	defer r.Logger.Sync()
-	if _, err := r.InnerArray[key]; err {
-		if len(values) == 1 {
-			deleted := r.InnerArray[key]
-			start := values[0]
-			end := len(r.InnerArray[key])
+	if array, err := r.InnerArray[key]; err {
+		if len(Values) == 1 {
+			deleted := array.Values
+			start := Values[0]
+			end := len(array.Values)
 			if start < 0 {
 				start = -start
-				deleted = r.InnerArray[key][0:start]
-				r.InnerArray[key] = r.InnerArray[key][start:]
+				deleted = array.Values[0:start]
+				array.Values = array.Values[start:]
+				r.InnerArray[key] = array
 			} else {
-				start = len(r.InnerArray[key]) - start
-				deleted = r.InnerArray[key][start:end]
-				r.InnerArray[key] = r.InnerArray[key][:start]
+				start = len(array.Values) - start
+				deleted = array.Values[start:end]
+				array.Values = array.Values[:start]
+				r.InnerArray[key] = array
 			}
 			return deleted, nil
-		} else if len(values) == 2 {
-			start := values[0]
-			end := values[1]
+		} else if len(Values) == 2 {
+			start := Values[0]
+			end := Values[1]
 			if start < 0 {
 				start = -start
 			} else {
-				start = len(r.InnerArray[key]) - values[0]
+				start = len(array.Values) - Values[0]
 			}
 			if end < 0 {
 				end = -end - 1
 			} else {
-				end = len(r.InnerArray[key]) - values[1]
+				end = len(array.Values) - Values[1]
 			}
 			start_index, end_index := min(start, end), max(start, end)
 			deleted := make([]string, end_index-start_index)
-			copy(deleted, r.InnerArray[key][start_index:end_index])
-			r.InnerArray[key] = append(r.InnerArray[key][:start_index], r.InnerArray[key][end_index:]...)
+			copy(deleted, array.Values[start_index:end_index])
+			array.Values = append(array.Values[:start_index], array.Values[end_index:]...)
+			r.InnerArray[key] = array
 			return deleted, nil
 		}
 		return nil, errors.New("key does not exit")
@@ -240,62 +284,61 @@ func (r Storage) Rpop(key string, values []int) ([]string, error) {
 }
 
 func (r Storage) LSet(key string, index uint64, element string) (string, error) {
-	if int(index) > len(r.InnerArray[key]) {
+	if int(index) > len(r.InnerArray[key].Values) {
 		return "", errors.New("index out of range")
 	}
 	if _, err := r.InnerArray[key]; err {
-		r.InnerArray[key][index] = element
+		r.InnerArray[key].Values[index] = element
 		return "OK", nil
 	}
 	return "", errors.New("key does not exist")
 }
 
 func (r Storage) LGet(key string, index int) (string, error) {
-	if index < 0 || index > len(r.InnerArray[key]) {
+	if index < 0 || index > len(r.InnerArray[key].Values) {
 		return "", errors.New("key does not exist")
 	}
-	return r.InnerArray[key][index], nil
+	return r.InnerArray[key].Values[index], nil
 }
 
-func (r *Storage) Set(key string, value interface{}) error {
+func (r *Storage) Set(key string, Value string, expireTime int64) error {
 	defer r.Logger.Sync()
-	//defer r.SaveToJSON("data.json")
+	defer r.SaveToJSON("data.json")
 	if !r.CheckKeys(key) {
-		switch state := value.(type) {
-		case string:
-			r.InnerString[key] = state
-			r.InnerKeys[key] = struct{}{}
-			r.Logger.Info("key with int value set")
-		case int:
-			r.InnerInt[key] = state
-			r.InnerKeys[key] = struct{}{}
-			r.Logger.Info("key with string value set")
-		default:
-			return errors.New("value must be equal a string or a integer")
-
+		if expireTime != 0 {
+			r.InnerScalar[key] = Scalar{
+				Value:    Value,
+				ExpireAt: expireTime,
+			}
+		} else if expireTime == 0 {
+			r.InnerScalar[key] = Scalar{
+				Value:    Value,
+				ExpireAt: deafultExpireTime,
+			}
 		}
+		r.InnerKeys[key] = struct{}{}
 	}
 	return errors.New("keys existed")
 }
 
-func (r Storage) Get(key string) (string, error) {
-	if _, okint := r.InnerInt[key]; okint {
-		return strconv.Itoa(r.InnerInt[key]), nil
-	} else if resstring, okstring := r.InnerString[key]; okstring {
-		return resstring, nil
+func (r Storage) Get(key string) (string, int64, error) {
+	if val, ok := r.InnerScalar[key]; ok {
+		return val.Value, val.ExpireAt, nil
 	}
 	defer r.Logger.Sync()
-	return "", errors.New("key does not exist")
+	return "", 0, errors.New("key does not exist")
 }
 
 func (r Storage) GetKind(key string) (interface{}, error) {
 	defer r.Logger.Sync()
-	if _, okint := r.InnerInt[key]; okint {
-		r.Logger.Info("key D sent")
-		return "D", nil
-	} else if _, okstring := r.InnerString[key]; okstring {
-		r.Logger.Info("key S sent")
-		return "S", nil
+	if r.CheckKeys(key) {
+		if _, okint := strconv.Atoi(r.InnerScalar[key].Value); okint == nil {
+			r.Logger.Info("key D sent")
+			return "D", nil
+		} else {
+			r.Logger.Info("key S sent")
+			return "S", nil
+		}
 	}
 	return "", errors.New("key does not exist")
 }

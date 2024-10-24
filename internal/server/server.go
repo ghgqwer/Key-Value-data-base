@@ -15,6 +15,7 @@ type Server struct {
 
 type Entry struct {
 	Value    string   `json: "value"`
+	ExpireAt int64    `json: expireAt`
 	List     []string `json: "list"`
 	List_int []int    `json: "list_int"`
 	Element  string   `json: "element`
@@ -142,7 +143,7 @@ func (r *Server) handlerArrLpush(ctx *gin.Context) {
 		return
 	}
 
-	r.storage.Lpush(key, v.List)
+	r.storage.Lpush(key, v.List, v.ExpireAt)
 	r.storage.SaveToJSON("data.json")
 	ctx.Status(http.StatusOK)
 }
@@ -157,20 +158,20 @@ func (r *Server) handlerArrRpush(ctx *gin.Context) {
 		return
 	}
 
-	r.storage.Rpush(key, v.List)
+	r.storage.Rpush(key, v.List, v.ExpireAt)
 	r.storage.SaveToJSON("data.json")
 	ctx.Status(http.StatusOK)
 }
 
 func (r *Server) handlerArrGet(ctx *gin.Context) {
 	key := ctx.Param("key")
-	v, err := r.storage.Check_arr(key)
+	v, expireTime, err := r.storage.Check_arr(key)
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, Entry{List: v})
+	ctx.JSON(http.StatusOK, Entry{List: v, ExpireAt: expireTime})
 }
 
 func (r *Server) HandlerSet(ctx *gin.Context) {
@@ -183,7 +184,7 @@ func (r *Server) HandlerSet(ctx *gin.Context) {
 		return
 	}
 
-	r.storage.Set(key, v.Value)
+	r.storage.Set(key, v.Value, v.ExpireAt)
 	r.storage.SaveToJSON("data.json")
 	ctx.Status(http.StatusOK)
 }
@@ -191,14 +192,14 @@ func (r *Server) HandlerSet(ctx *gin.Context) {
 func (r *Server) HandlerGet(ctx *gin.Context) {
 	key := ctx.Param("key")
 
-	v, err := r.storage.Get(key)
+	v, expire, err := r.storage.Get(key)
 
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, Entry{Value: v})
+	ctx.JSON(http.StatusOK, Entry{Value: v, ExpireAt: expire})
 }
 
 func (r *Server) Start() {

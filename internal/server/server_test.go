@@ -34,9 +34,8 @@ func NewStorageTest() storage.Storage {
 		return storage.Storage{}
 	}
 	return storage.Storage{
-		InnerString: make(map[string]string),
-		InnerInt:    make(map[string]int),
-		InnerArray:  make(map[string][]string),
+		InnerScalar: make(map[string]storage.Scalar),
+		InnerArray:  make(map[string]storage.Array),
 		InnerKeys:   make(map[string]struct{}),
 		Logger:      logger,
 	}
@@ -44,7 +43,7 @@ func NewStorageTest() storage.Storage {
 
 func TestHandlerGet(t *testing.T) {
 	s := NewStorageTest()
-	s.Set("testKey", "testValue")
+	s.Set("testKey", "testValue", 0)
 
 	recorder := httptest.NewRecorder()
 	server := New("localhost:8080", &s)
@@ -88,7 +87,7 @@ func TestHandlerSet(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
-	if _, err := s.Get(data.Key); err != nil {
+	if _, _, err := s.Get(data.Key); err != nil {
 		t.Errorf("value doesnt exist: %v", err)
 	}
 }
@@ -115,7 +114,7 @@ func TestRpushArr(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
-	if _, err := s.Check_arr("testLpush"); err != nil {
+	if _, _, err := s.Check_arr("testLpush"); err != nil {
 		t.Errorf("%v", err)
 	}
 }
@@ -126,7 +125,7 @@ func TestRaddtoset(t *testing.T) {
 	server := New("localhost:8080", &s)
 	router := server.newApi()
 
-	s.Rpush("testRaddtoset", []string{"1", "2"})
+	s.Rpush("testRaddtoset", []string{"1", "2"}, 0)
 
 	testData := dataList{
 		Key:  "testRaddtoset",
@@ -145,7 +144,7 @@ func TestRaddtoset(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
-	arr, err := s.Check_arr(testData.Key)
+	arr, _, err := s.Check_arr(testData.Key)
 	if err != nil {
 		t.Errorf("key doesnt exist: %v", err)
 	}
@@ -167,7 +166,7 @@ func TestLpop(t *testing.T) {
 		ListInt: []int{1},
 	}
 
-	s.Lpush(testData.Key, testData.List)
+	s.Lpush(testData.Key, testData.List, 0)
 
 	jsonData, err := json.Marshal(testData)
 	if err != nil {
@@ -179,7 +178,7 @@ func TestLpop(t *testing.T) {
 		bytes.NewBuffer(jsonData))
 	router.ServeHTTP(recorder, req)
 
-	if _, err := s.Check_arr(testData.Key); err != nil {
+	if _, _, err := s.Check_arr(testData.Key); err != nil {
 		t.Errorf("key doesnt exist: %v", err)
 	}
 
