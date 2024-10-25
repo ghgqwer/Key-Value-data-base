@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -17,7 +18,7 @@ var (
 	Root_dict = "/Users/vadim/Desktop/golang/sixth lessson/BolshoiGolangProject"
 )
 
-const deafultExpireTime = int64(-1)
+const deafultExpireTime = int64(10)
 
 type Scalar struct {
 	Value    string `json:"value"`
@@ -119,12 +120,12 @@ func (r *Storage) Lpush(key string, list []string, expireTime int64) []string {
 		if expireTime == 0 {
 			r.InnerArray[key] = Array{
 				Values:   list,
-				ExpireAt: deafultExpireTime,
+				ExpireAt: time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli(),
 			}
 		} else {
 			r.InnerArray[key] = Array{
 				Values:   list,
-				ExpireAt: expireTime,
+				ExpireAt: time.Now().Add(time.Duration(expireTime * int64(time.Second))).UnixMilli(),
 			}
 		}
 		r.InnerKeys[key] = struct{}{}
@@ -147,12 +148,12 @@ func (r Storage) Rpush(key string, list []string, expireTime int64) []string {
 		if expireTime == 0 {
 			r.InnerArray[key] = Array{
 				Values:   list,
-				ExpireAt: deafultExpireTime,
+				ExpireAt: time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli(),
 			}
 		} else {
 			r.InnerArray[key] = Array{
 				Values:   list,
-				ExpireAt: expireTime,
+				ExpireAt: time.Now().Add(time.Duration(expireTime * int64(time.Second))).UnixMilli(),
 			}
 		}
 		r.InnerKeys[key] = struct{}{}
@@ -183,7 +184,12 @@ func (r Storage) Raddtoset(key string, list []string) {
 }
 
 func (r Storage) Check_arr(key string) ([]string, int64, error) {
-	if _, err := r.InnerArray[key]; err {
+	if array, err := r.InnerArray[key]; err {
+		if time.Now().UnixMilli() >= array.ExpireAt {
+			delete(r.InnerArray, key)
+			delete(r.InnerKeys, key)
+		}
+		array.ExpireAt = time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli()
 		return r.InnerArray[key].Values, r.InnerArray[key].ExpireAt, nil
 	}
 	return nil, 0, errors.New("key does not exist")
@@ -308,12 +314,12 @@ func (r *Storage) Set(key string, Value string, expireTime int64) error {
 		if expireTime != 0 {
 			r.InnerScalar[key] = Scalar{
 				Value:    Value,
-				ExpireAt: expireTime,
+				ExpireAt: time.Now().Add(time.Duration(expireTime * int64(time.Second))).UnixMilli(), //expireTime
 			}
 		} else if expireTime == 0 {
 			r.InnerScalar[key] = Scalar{
 				Value:    Value,
-				ExpireAt: deafultExpireTime,
+				ExpireAt: time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli(), //deafultExpireTime
 			}
 		}
 		r.InnerKeys[key] = struct{}{}
@@ -323,6 +329,12 @@ func (r *Storage) Set(key string, Value string, expireTime int64) error {
 
 func (r Storage) Get(key string) (string, int64, error) {
 	if val, ok := r.InnerScalar[key]; ok {
+		if time.Now().UnixMilli() >= val.ExpireAt {
+			delete(r.InnerScalar, key)
+			delete(r.InnerKeys, key)
+			return "", 0, errors.New("expired")
+		}
+		val.ExpireAt = time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli()
 		return val.Value, val.ExpireAt, nil
 	}
 	defer r.Logger.Sync()

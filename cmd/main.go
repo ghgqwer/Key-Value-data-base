@@ -15,6 +15,21 @@ func main() {
 		panic(err)
 	}
 
+	// store.Set("first", "maxonP&*r", 5)
+	// fmt.Println(store.Get("first"))
+	// time.Sleep(5 * time.Second)
+	// fmt.Println(store.Get("first"))
+	// // time.Sleep(5 * time.Second)
+	// // fmt.Println(store.Get("first"))
+
+	// store.Set("first", "maxonP&*r", 0)
+	// time.Sleep(3 * time.Second)
+	// fmt.Println(store.Get("first"))
+	// time.Sleep(5 * time.Second)
+	// fmt.Println(store.Get("first"))
+	// time.Sleep(10 * time.Second)
+	// fmt.Println(store.Get("first"))
+
 	// fmt.Println(store.Lpush("first", []string{"1", "2", "3"}, 10))
 	// fmt.Println(store.Rpush("first", []string{"1", "2", "3"}, 0))
 	// store.Raddtoset("first", []string{"1", "7"})
