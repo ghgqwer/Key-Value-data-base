@@ -17,7 +17,7 @@ type Entry struct {
 	Value    string   `json: "value"`
 	ExpireAt int64    `json: expireAt`
 	List     []string `json: "list"`
-	List_int []int    `json: "list_int"`
+	ListInt  []int    `json: "listInt"`
 	Element  string   `json: "element`
 }
 
@@ -65,7 +65,7 @@ func (r *Server) handlerArrLGet(ctx *gin.Context) {
 		return
 	}
 
-	value, err := r.storage.LGet(key, v.List_int[0])
+	value, err := r.storage.LGet(key, v.ListInt[0])
 
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusBadGateway)
@@ -85,7 +85,7 @@ func (r *Server) handlerArrLSet(ctx *gin.Context) {
 		return
 	}
 
-	r.storage.LSet(key, uint64(v.List_int[0]), v.Element)
+	r.storage.LSet(key, uint64(v.ListInt[0]), v.Element)
 	ctx.AbortWithStatus(http.StatusOK)
 	r.storage.SaveToJSON("data.json")
 }
@@ -100,7 +100,7 @@ func (r *Server) handlerRpopArr(ctx *gin.Context) {
 		return
 	}
 
-	r.storage.Rpop(key, v.List_int)
+	r.storage.Rpop(key, v.ListInt)
 }
 
 func (r *Server) handlerLpopArr(ctx *gin.Context) {
@@ -113,7 +113,7 @@ func (r *Server) handlerLpopArr(ctx *gin.Context) {
 		return
 	}
 
-	r.storage.Lpop(key, v.List_int)
+	r.storage.Lpop(key, v.ListInt)
 	r.storage.SaveToJSON("data.json")
 	ctx.AbortWithStatus(http.StatusOK)
 }
