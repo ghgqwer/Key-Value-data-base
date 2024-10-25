@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -50,6 +51,74 @@ func NewStorage() (Storage, error) {
 		InnerKeys:   make(map[string]struct{}),
 		Logger:      Logger,
 	}, nil
+}
+
+func (r Storage) GarbageCollection(closeChan <-chan struct{}, n time.Duration) {
+	for {
+		select {
+		case <-closeChan:
+			return
+		case <-time.After(n):
+			r.Clean()
+		}
+	}
+}
+
+//First realisation
+
+// func (r Storage) Clean() {
+// 	var m sync.Mutex
+// 	m.Lock()
+// 	defer m.Unlock()
+
+// 	for key, value := range r.InnerScalar {
+// 		if time.Now().UnixMilli() >= value.ExpireAt {
+// 			delete(r.InnerArray, key)
+// 		}
+// 	}
+
+// 	for key, value := range r.InnerArray {
+// 		if time.Now().UnixMilli() >= value.ExpireAt {
+// 			delete(r.InnerArray, key)
+// 		}
+// 	}
+
+// }
+
+func (r Storage) Clean() {
+	var (
+		wg sync.WaitGroup
+		m  sync.Mutex
+	)
+	numWorkers := 4
+	tasks := make(chan string)
+	for i := 0; i < numWorkers; i++ {
+		m.Lock()
+		defer m.Unlock()
+		wg.Add(1)
+		go r.cleaner(tasks, &wg)
+	}
+
+	for key := range r.InnerKeys {
+		tasks <- key
+	}
+}
+
+func (r Storage) cleaner(task <-chan string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for key := range task {
+		if value, err := r.InnerScalar[key]; err {
+			if time.Now().UnixMilli() > value.ExpireAt {
+				delete(r.InnerScalar, key)
+			}
+		}
+
+		if value, err := r.InnerArray[key]; err {
+			if time.Now().UnixMilli() >= value.ExpireAt {
+				delete(r.InnerArray, key)
+			}
+		}
+	}
 }
 
 func (r Storage) WriteAtomic(path string) error {
@@ -113,60 +182,80 @@ func (r *Storage) SaveToJSON(path string) error {
 	return nil
 }
 
-func (r *Storage) Lpush(key string, list []string, expireTime int64) []string {
-	defer r.Logger.Sync()
-	slices.Reverse(list)
-	if _, ok := r.InnerArray[key]; !ok {
-		if expireTime == 0 {
-			r.InnerArray[key] = Array{
-				Values:   list,
-				ExpireAt: time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli(),
-			}
-		} else {
-			r.InnerArray[key] = Array{
-				Values:   list,
-				ExpireAt: time.Now().Add(time.Duration(expireTime * int64(time.Second))).UnixMilli(),
-			}
-		}
-		r.InnerKeys[key] = struct{}{}
-		r.Logger.Info("List set")
-		return r.InnerArray[key].Values
-	} else {
-		currentArray := r.InnerArray[key]
-		currentArray.Values = append(list, currentArray.Values...)
-		r.InnerArray[key] = currentArray
-		//r.InnerArray[key].Values = append(list, r.InnerArray[key].Values...)
-		r.Logger.Info("Values append in list in left")
-		return r.InnerArray[key].Values
+func (r *Storage) Expire(key string, expire int64) error {
+	if array, err := r.InnerScalar[key]; err {
+		array = r.InnerScalar[key]
+		array.ExpireAt = time.Now().Add(time.Duration(expire * int64(time.Second))).UnixMilli()
+		r.InnerScalar[key] = array
+		return nil
+	} else if array, err := r.InnerArray[key]; err {
+		array = r.InnerArray[key]
+		array.ExpireAt = time.Now().Add(time.Duration(expire * int64(time.Second))).UnixMilli()
+		r.InnerArray[key] = array
+		return nil
 	}
+	return errors.New("key doesnt exist")
 }
 
-func (r Storage) Rpush(key string, list []string, expireTime int64) []string {
-
+func (r *Storage) Lpush(key string, list []string, expireTime int64) ([]string, error) {
 	defer r.Logger.Sync()
-	if _, ok := r.InnerArray[key]; !ok {
-		if expireTime == 0 {
-			r.InnerArray[key] = Array{
-				Values:   list,
-				ExpireAt: time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli(),
+	slices.Reverse(list)
+	if _, err := r.InnerScalar[key]; !err {
+		if _, ok := r.InnerArray[key]; !ok {
+			if expireTime == 0 {
+				r.InnerArray[key] = Array{
+					Values:   list,
+					ExpireAt: time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli(),
+				}
+			} else {
+				r.InnerArray[key] = Array{
+					Values:   list,
+					ExpireAt: time.Now().Add(time.Duration(expireTime * int64(time.Second))).UnixMilli(),
+				}
 			}
+			r.InnerKeys[key] = struct{}{}
+			r.Logger.Info("List set")
+			return r.InnerArray[key].Values, nil
 		} else {
-			r.InnerArray[key] = Array{
-				Values:   list,
-				ExpireAt: time.Now().Add(time.Duration(expireTime * int64(time.Second))).UnixMilli(),
-			}
+			currentArray := r.InnerArray[key]
+			currentArray.Values = append(list, currentArray.Values...)
+			r.InnerArray[key] = currentArray
+			//r.InnerArray[key].Values = append(list, r.InnerArray[key].Values...)
+			r.Logger.Info("Values append in list in left")
+			return r.InnerArray[key].Values, nil
 		}
-		r.InnerKeys[key] = struct{}{}
-		r.Logger.Info("List set")
-		return r.InnerArray[key].Values
-	} else {
-		currentArray := r.InnerArray[key]
-		currentArray.Values = append(currentArray.Values, list...)
-		r.InnerArray[key] = currentArray
-		//r.InnerArray[key].Values = append(list, r.InnerArray[key].Values...)
-		r.Logger.Info("Values append in list in left")
-		return r.InnerArray[key].Values
 	}
+	return nil, errors.New("key existed")
+}
+
+func (r Storage) Rpush(key string, list []string, expireTime int64) ([]string, error) {
+	defer r.Logger.Sync()
+	if !r.CheckKeys(key) {
+		if _, ok := r.InnerArray[key]; !ok {
+			if expireTime == 0 {
+				r.InnerArray[key] = Array{
+					Values:   list,
+					ExpireAt: time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli(),
+				}
+			} else {
+				r.InnerArray[key] = Array{
+					Values:   list,
+					ExpireAt: time.Now().Add(time.Duration(expireTime * int64(time.Second))).UnixMilli(),
+				}
+			}
+			r.InnerKeys[key] = struct{}{}
+			r.Logger.Info("List set")
+			return r.InnerArray[key].Values, nil
+		} else {
+			currentArray := r.InnerArray[key]
+			currentArray.Values = append(currentArray.Values, list...)
+			r.InnerArray[key] = currentArray
+			//r.InnerArray[key].Values = append(list, r.InnerArray[key].Values...)
+			r.Logger.Info("Values append in list in left")
+			return r.InnerArray[key].Values, nil
+		}
+	}
+	return nil, errors.New("key existed")
 }
 
 func (r Storage) Raddtoset(key string, list []string) {
@@ -188,6 +277,7 @@ func (r Storage) Check_arr(key string) ([]string, int64, error) {
 		if time.Now().UnixMilli() >= array.ExpireAt {
 			delete(r.InnerArray, key)
 			delete(r.InnerKeys, key)
+			return nil, 0, errors.New("key does not exist")
 		}
 		array.ExpireAt = time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli()
 		return r.InnerArray[key].Values, r.InnerArray[key].ExpireAt, nil

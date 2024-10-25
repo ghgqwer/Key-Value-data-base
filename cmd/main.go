@@ -7,6 +7,7 @@ import (
 	"project_1/internal/server"
 	"project_1/internal/storage/storage"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -22,21 +23,23 @@ func main() {
 	// // time.Sleep(5 * time.Second)
 	// // fmt.Println(store.Get("first"))
 
-	// store.Set("first", "maxonP&*r", 0)
+	// store.Set("first", "maxonP&*r", 5)
+	// fmt.Println(store.Get("first"))
+	// store.Expire("first", 5)
 	// time.Sleep(3 * time.Second)
 	// fmt.Println(store.Get("first"))
-	// time.Sleep(5 * time.Second)
-	// fmt.Println(store.Get("first"))
-	// time.Sleep(10 * time.Second)
-	// fmt.Println(store.Get("first"))
 
-	// fmt.Println(store.Lpush("first", []string{"1", "2", "3"}, 10))
-	// fmt.Println(store.Rpush("first", []string{"1", "2", "3"}, 0))
-	// store.Raddtoset("first", []string{"1", "7"})
+	// store.Lpush("first", []string{"1", "2", "3"}, 10)
+	// store.Expire("first", 5)
+	// time.Sleep(5 * time.Second)
 	// fmt.Println(store.Check_arr("first"))
-	// //store.Raddtoset("first", []string{"1", "7", "123"})
-	// store.LSet("first", 0, "19")
-	// fmt.Println(store.LGet("first", 0))
+
+	closeChan := make(chan struct{})
+	go store.GarbageCollection(closeChan, 10*time.Second)
+
+	store.ReadFromJSON("data.json")
+	serv := server.New(":8090", &store)
+	serv.Start()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
@@ -46,7 +49,7 @@ func main() {
 		// Блокировка до получения сигнала
 		<-c
 		fmt.Println("Received shutdown signal")
-
+		close(closeChan)
 		// Сохранение данных в файл перед завершением
 		if err := store.SaveToJSON("data.json"); err != nil {
 			fmt.Printf("Error saving data: %v\n", err)
@@ -56,8 +59,4 @@ func main() {
 
 		os.Exit(0) // Завершение программы
 	}()
-
-	store.ReadFromJSON("data.json")
-	serv := server.New(":8090", &store)
-	serv.Start()
 }
