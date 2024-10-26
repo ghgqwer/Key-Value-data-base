@@ -114,7 +114,7 @@ func TestRpushArr(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
-	if _, _, err := s.Check_arr("testLpush"); err != nil {
+	if _, _, err := s.CheckArr("testLpush"); err != nil {
 		t.Errorf("%v", err)
 	}
 }
@@ -144,7 +144,7 @@ func TestRaddtoset(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
 
-	arr, _, err := s.Check_arr(testData.Key)
+	arr, _, err := s.CheckArr(testData.Key)
 	if err != nil {
 		t.Errorf("key doesnt exist: %v", err)
 	}
@@ -178,7 +178,7 @@ func TestLpop(t *testing.T) {
 		bytes.NewBuffer(jsonData))
 	router.ServeHTTP(recorder, req)
 
-	if _, _, err := s.Check_arr(testData.Key); err != nil {
+	if _, _, err := s.CheckArr(testData.Key); err != nil {
 		t.Errorf("key doesnt exist: %v", err)
 	}
 

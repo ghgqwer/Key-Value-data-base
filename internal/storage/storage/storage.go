@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"sync"
 	"time"
 
@@ -23,7 +22,8 @@ const deafultExpireTime = int64(10)
 
 type Scalar struct {
 	Value    string `json:"value"`
-	ExpireAt int64  `json:"expireAt"`
+	Kind     string
+	ExpireAt int64 `json:"expireAt"`
 }
 
 type Array struct {
@@ -272,7 +272,7 @@ func (r Storage) Raddtoset(key string, list []string) {
 	}
 }
 
-func (r Storage) Check_arr(key string) ([]string, int64, error) {
+func (r Storage) CheckArr(key string) ([]string, int64, error) {
 	if array, err := r.InnerArray[key]; err {
 		if time.Now().UnixMilli() >= array.ExpireAt {
 			delete(r.InnerArray, key)
@@ -397,18 +397,29 @@ func (r Storage) LGet(key string, index int) (string, error) {
 	return r.InnerArray[key].Values[index], nil
 }
 
-func (r *Storage) Set(key string, Value string, expireTime int64) error {
+func (r *Storage) Set(key string, Value any, expireTime int64) error {
 	defer r.Logger.Sync()
-	defer r.SaveToJSON("data.json")
+	stringVal := fmt.Sprintf("%v", Value)
+	Kind := ""
+	switch Value.(type) {
+	case string:
+		Kind = "S"
+	case int:
+		Kind = "D"
+	default:
+		Kind = "NonType"
+	}
 	if !r.CheckKeys(key) {
 		if expireTime != 0 {
 			r.InnerScalar[key] = Scalar{
-				Value:    Value,
+				Value:    stringVal,
+				Kind:     Kind,
 				ExpireAt: time.Now().Add(time.Duration(expireTime * int64(time.Second))).UnixMilli(), //expireTime
 			}
 		} else if expireTime == 0 {
 			r.InnerScalar[key] = Scalar{
-				Value:    Value,
+				Value:    stringVal,
+				Kind:     Kind,
 				ExpireAt: time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli(), //deafultExpireTime
 			}
 		}
@@ -431,16 +442,24 @@ func (r Storage) Get(key string) (string, int64, error) {
 	return "", 0, errors.New("key does not exist")
 }
 
-func (r Storage) GetKind(key string) (interface{}, error) {
+// func (r Storage) GetKind(key string) (interface{}, error) {
+// 	defer r.Logger.Sync()
+// 	if r.CheckKeys(key) {
+// 		if _, okint := strconv.Atoi(r.InnerScalar[key].Value); okint == nil {
+// 			r.Logger.Info("key D sent")
+// 			return "D", nil
+// 		} else {
+// 			r.Logger.Info("key S sent")
+// 			return "S", nil
+// 		}
+// 	}
+// 	return "", errors.New("key does not exist")
+// }
+
+func (r Storage) GetKind(key string) (string, error) {
 	defer r.Logger.Sync()
 	if r.CheckKeys(key) {
-		if _, okint := strconv.Atoi(r.InnerScalar[key].Value); okint == nil {
-			r.Logger.Info("key D sent")
-			return "D", nil
-		} else {
-			r.Logger.Info("key S sent")
-			return "S", nil
-		}
+		return r.InnerScalar[key].Kind, nil
 	}
 	return "", errors.New("key does not exist")
 }
