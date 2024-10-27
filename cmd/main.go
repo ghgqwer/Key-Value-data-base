@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"project_1/internal/filework"
 	"project_1/internal/server"
 	"project_1/internal/storage/storage"
 	"syscall"
@@ -18,6 +19,7 @@ func main() {
 
 	closeChan := make(chan struct{})
 	go store.GarbageCollection(closeChan, 10*time.Second)
+	go store.LoggerSync(closeChan, 10*time.Second)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
@@ -29,7 +31,7 @@ func main() {
 		fmt.Println("Received shutdown signal")
 		close(closeChan)
 		// Сохранение данных в файл перед завершением
-		if err := store.SaveToJSON(server.DataJson); err != nil {
+		if err := filework.SaveToJSON(store, server.DataJson); err != nil {
 			fmt.Printf("Error saving data: %v\n", err)
 		} else {
 			fmt.Println("Data saved to data.json")
@@ -38,7 +40,7 @@ func main() {
 		os.Exit(0) // Завершение программы
 	}()
 
-	store.ReadFromJSON(server.DataJson)
+	filework.ReadFromJSON(store, server.DataJson)
 	serv := server.New(":8090", &store)
 	serv.Start()
 }

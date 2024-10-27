@@ -1,12 +1,10 @@
 package storage
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
-	"os"
-	"path/filepath"
+	"project_1/internal/filework"
 	"slices"
 	"sync"
 	"time"
@@ -14,11 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	Root_dict = "/Users/vadim/Desktop/golang/sixth lessson/BolshoiGolangProject"
-)
-
-const deafultExpireTime = int64(10)
+//const deafultExpireTime = int64(0)
 
 type Scalar struct {
 	Value    string `json:"value"`
@@ -31,11 +25,17 @@ type Array struct {
 	ExpireAt int64    `json:"expireAt"`
 }
 
+type Hash struct {
+	value    map[string]string
+	ExpireAt int64
+}
+
 type Storage struct {
-	InnerScalar map[string]Scalar
-	InnerArray  map[string]Array
-	InnerKeys   map[string]struct{}
-	Logger      *zap.Logger
+	InnerScalar  map[string]Scalar
+	InnerArray   map[string]Array
+	InnerHashmap map[string]Hash
+	InnerKeys    map[string]struct{}
+	Logger       *zap.Logger
 }
 
 func NewStorage() (Storage, error) {
@@ -43,13 +43,13 @@ func NewStorage() (Storage, error) {
 	if err != nil {
 		return Storage{}, err
 	}
-	defer Logger.Sync()
 	Logger.Info("created new storage")
 	return Storage{
-		InnerScalar: make(map[string]Scalar),
-		InnerArray:  make(map[string]Array),
-		InnerKeys:   make(map[string]struct{}),
-		Logger:      Logger,
+		InnerScalar:  make(map[string]Scalar),
+		InnerArray:   make(map[string]Array),
+		InnerHashmap: make(map[string]Hash),
+		InnerKeys:    make(map[string]struct{}),
+		Logger:       Logger,
 	}, nil
 }
 
@@ -59,127 +59,41 @@ func (r Storage) GarbageCollection(closeChan <-chan struct{}, n time.Duration) {
 		case <-closeChan:
 			return
 		case <-time.After(n):
-			r.Clean()
+			r.Cleaner(&sync.Mutex{})
 		}
 	}
 }
 
-//First realisation
-
-// func (r Storage) Clean() {
-// 	var m sync.Mutex
-// 	m.Lock()
-// 	defer m.Unlock()
-
-// 	for key, value := range r.InnerScalar {
-// 		if time.Now().UnixMilli() >= value.ExpireAt {
-// 			delete(r.InnerArray, key)
-// 		}
-// 	}
-
-// 	for key, value := range r.InnerArray {
-// 		if time.Now().UnixMilli() >= value.ExpireAt {
-// 			delete(r.InnerArray, key)
-// 		}
-// 	}
-
-// }
-
-func (r Storage) Clean() {
-	var (
-		wg sync.WaitGroup
-		m  sync.Mutex
-	)
-	numWorkers := 4
-	tasks := make(chan string)
-	for i := 0; i < numWorkers; i++ {
-		m.Lock()
-		defer m.Unlock()
-		wg.Add(1)
-		go r.cleaner(tasks, &wg)
-	}
+func (r Storage) Cleaner(m *sync.Mutex) {
+	realTime := time.Now().UnixMilli()
+	m.Lock()
+	defer m.Unlock()
 
 	for key := range r.InnerKeys {
-		tasks <- key
-	}
-}
-
-func (r Storage) cleaner(task <-chan string, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for key := range task {
-		if value, err := r.InnerScalar[key]; err {
-			if time.Now().UnixMilli() > value.ExpireAt {
+		if value, ok := r.InnerScalar[key]; ok {
+			if realTime >= value.ExpireAt && value.ExpireAt != 0 {
 				delete(r.InnerScalar, key)
 			}
 		}
 
-		if value, err := r.InnerArray[key]; err {
-			if time.Now().UnixMilli() >= value.ExpireAt {
+		if value, ok := r.InnerArray[key]; ok {
+			if realTime >= value.ExpireAt && value.ExpireAt != 0 {
 				delete(r.InnerArray, key)
 			}
 		}
+		delete(r.InnerKeys, key)
 	}
 }
 
-func (r Storage) WriteAtomic(path string) error {
-	b, err := json.Marshal(r)
-	if err != nil {
-		return err
+func (r *Storage) LoggerSync(closeChan <-chan struct{}, n time.Duration) {
+	for {
+		select {
+		case <-closeChan:
+			return
+		case <-time.After(n):
+			r.Logger.Sync()
+		}
 	}
-	filename := filepath.Base(path)
-	tmpPathName := filepath.Join(Root_dict, filename+".tmp")
-
-	err = os.WriteFile(tmpPathName, b, 0o777)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		os.Remove(tmpPathName)
-	}()
-
-	return os.Rename(tmpPathName, Root_dict+path)
-}
-
-func (r *Storage) ReadFromJSON(path string) error {
-	file_path := filepath.Join(Root_dict, path)
-	fromFile, err := os.ReadFile(file_path)
-	if err != nil {
-		return r.SaveToJSON(path)
-	}
-
-	err = json.Unmarshal(fromFile, &r)
-	if err != nil {
-		return err
-	}
-
-	r.Logger.Info("json file read")
-	return nil
-}
-
-func (r *Storage) SaveToJSON(path string) error {
-	file_path := filepath.Join(Root_dict, path)
-	file, err := os.Create(file_path)
-	if err != nil {
-		fmt.Println("Error creating file", err)
-		return err
-	}
-	defer file.Close()
-
-	b, err := json.Marshal(r)
-	if err != nil {
-		fmt.Println("Error write file", err)
-		return err
-	}
-
-	err = os.WriteFile(file_path, b, 0o777)
-	if err != nil {
-		fmt.Println("Error write file", err)
-		return err
-	}
-
-	r.Logger.Info("json file saved")
-	return nil
 }
 
 func (r *Storage) Expire(key string, expire int64) error {
@@ -198,14 +112,13 @@ func (r *Storage) Expire(key string, expire int64) error {
 }
 
 func (r *Storage) Lpush(key string, list []string, expireTime int64) ([]string, error) {
-	defer r.Logger.Sync()
 	slices.Reverse(list)
 	if _, err := r.InnerScalar[key]; !err {
 		if _, ok := r.InnerArray[key]; !ok {
 			if expireTime == 0 {
 				r.InnerArray[key] = Array{
 					Values:   list,
-					ExpireAt: time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli(),
+					ExpireAt: 0,
 				}
 			} else {
 				r.InnerArray[key] = Array{
@@ -229,13 +142,12 @@ func (r *Storage) Lpush(key string, list []string, expireTime int64) ([]string, 
 }
 
 func (r Storage) Rpush(key string, list []string, expireTime int64) ([]string, error) {
-	defer r.Logger.Sync()
 	if !r.CheckKeys(key) {
 		if _, ok := r.InnerArray[key]; !ok {
 			if expireTime == 0 {
 				r.InnerArray[key] = Array{
 					Values:   list,
-					ExpireAt: time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli(),
+					ExpireAt: 0,
 				}
 			} else {
 				r.InnerArray[key] = Array{
@@ -274,109 +186,73 @@ func (r Storage) Raddtoset(key string, list []string) {
 
 func (r Storage) CheckArr(key string) ([]string, int64, error) {
 	if array, err := r.InnerArray[key]; err {
-		if time.Now().UnixMilli() >= array.ExpireAt {
+		if time.Now().UnixMilli() >= array.ExpireAt && array.ExpireAt != 0 {
 			delete(r.InnerArray, key)
 			delete(r.InnerKeys, key)
 			return nil, 0, errors.New("key does not exist")
 		}
-		array.ExpireAt = time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli()
 		return r.InnerArray[key].Values, r.InnerArray[key].ExpireAt, nil
 	}
 	return nil, 0, errors.New("key does not exist")
 }
 
-func (r Storage) Lpop(key string, Values []int) ([]string, error) {
+func (r Storage) Lpop(key string, start, end int) ([]string, error) {
 	defer r.Logger.Info("LPop done")
-	defer r.Logger.Sync()
 	if array, err := r.InnerArray[key]; err {
-		if len(Values) == 1 {
-			if int(math.Abs(float64(Values[0]))) > len(r.InnerArray[key].Values) {
-				deleted := array.Values
-				array.Values = nil
-				r.InnerArray[key] = array
-				return deleted, nil
-			}
-			end := Values[0]
-			if end < 0 {
-				end = len(r.InnerArray[key].Values) + end
-			}
-			deleted := array.Values[:end]
-			array.Values = array.Values[end:]
-			r.InnerArray[key] = array
-			return deleted, nil
-		} else if len(Values) == 2 {
-			if int(math.Abs(float64(Values[0])))+int(math.Abs(float64(Values[1]))) >
-				len(array.Values) {
-				deleted := array.Values
-				array.Values = nil
-				r.InnerArray[key] = array
-				return deleted, nil
-			}
-			start := Values[0]
-			end := Values[1]
-			if start < 0 {
-				start = len(array.Values) + start
-			}
-			if end < 0 {
-				end = len(array.Values) + end
-			}
-			end += 1
-			if start < 0 || start >= len(array.Values) || end <= start || end > len(array.Values) {
-				return nil, errors.New("index does not exit")
-			}
-			deleted := make([]string, end-start)
-			copy(deleted, array.Values[start:end])
-			array.Values = append(array.Values[:start], array.Values[end:]...)
+		if int(math.Abs(float64(start)))+int(math.Abs(float64(end))) >
+			len(array.Values) {
+			deleted := array.Values
+			array.Values = nil
 			r.InnerArray[key] = array
 			return deleted, nil
 		}
+		if start < 0 {
+			start = len(array.Values) + start
+		}
+		if end < 0 {
+			end = len(array.Values) + end
+		}
+		end += 1
+		if start < 0 || start >= len(array.Values) || end <= start || end > len(array.Values) {
+			return nil, errors.New("index out of range")
+		}
+		deleted := make([]string, end-start)
+		copy(deleted, array.Values[start:end])
+		array.Values = append(array.Values[:start], array.Values[end:]...)
+		r.InnerArray[key] = array
+		return deleted, nil
 	}
 	return nil, errors.New("key does not exit")
 }
 
-func (r Storage) Rpop(key string, Values []int) ([]string, error) {
+func (r Storage) Rpop(key string, start, end int) ([]string, error) {
 	defer r.Logger.Info("Rpop done")
-	defer r.Logger.Sync()
 	if array, err := r.InnerArray[key]; err {
-		if len(Values) == 1 {
+		if int(math.Abs(float64(start)))+int(math.Abs(float64(end))) >
+			len(array.Values) {
 			deleted := array.Values
-			start := Values[0]
-			end := len(array.Values)
-			if start < 0 {
-				start = -start
-				deleted = array.Values[0:start]
-				array.Values = array.Values[start:]
-				r.InnerArray[key] = array
-			} else {
-				start = len(array.Values) - start
-				deleted = array.Values[start:end]
-				array.Values = array.Values[:start]
-				r.InnerArray[key] = array
-			}
-			return deleted, nil
-		} else if len(Values) == 2 {
-			start := Values[0]
-			end := Values[1]
-			if start < 0 {
-				start = -start
-			} else {
-				start = len(array.Values) - Values[0]
-			}
-			if end < 0 {
-				end = -end - 1
-			} else {
-				end = len(array.Values) - Values[1]
-			}
-			start_index, end_index := min(start, end), max(start, end)
-			deleted := make([]string, end_index-start_index)
-			copy(deleted, array.Values[start_index:end_index])
-			array.Values = append(array.Values[:start_index], array.Values[end_index:]...)
+			array.Values = nil
 			r.InnerArray[key] = array
 			return deleted, nil
 		}
-		return nil, errors.New("key does not exit")
+		if start < 0 {
+			start = -start
+		} else {
+			start = len(array.Values) - start
+		}
+		if end < 0 {
+			end = -end - 1
+		} else {
+			end = len(array.Values) - end
+		}
+		start_index, end_index := min(start, end), max(start, end)
+		deleted := make([]string, end_index-start_index)
+		copy(deleted, array.Values[start_index:end_index])
+		array.Values = append(array.Values[:start_index], array.Values[end_index:]...)
+		r.InnerArray[key] = array
+		return deleted, nil
 	}
-	return nil, errors.New("key does not exist")
+	return nil, errors.New("key does not exit")
 }
 
 func (r Storage) LSet(key string, index uint64, element string) (string, error) {
@@ -398,7 +274,6 @@ func (r Storage) LGet(key string, index int) (string, error) {
 }
 
 func (r *Storage) Set(key string, Value any, expireTime int64) error {
-	defer r.Logger.Sync()
 	stringVal := fmt.Sprintf("%v", Value)
 	Kind := ""
 	switch Value.(type) {
@@ -420,44 +295,28 @@ func (r *Storage) Set(key string, Value any, expireTime int64) error {
 			r.InnerScalar[key] = Scalar{
 				Value:    stringVal,
 				Kind:     Kind,
-				ExpireAt: time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli(), //deafultExpireTime
+				ExpireAt: 0, //deafultExpireTime
 			}
 		}
 		r.InnerKeys[key] = struct{}{}
 	}
+	defer filework.SaveToJSON(r, "data.json")
 	return errors.New("keys existed")
 }
 
 func (r Storage) Get(key string) (string, int64, error) {
 	if val, ok := r.InnerScalar[key]; ok {
-		if time.Now().UnixMilli() >= val.ExpireAt {
+		if time.Now().UnixMilli() >= val.ExpireAt && val.ExpireAt != 0 {
 			delete(r.InnerScalar, key)
 			delete(r.InnerKeys, key)
 			return "", 0, errors.New("expired")
 		}
-		val.ExpireAt = time.Now().Add(time.Duration(deafultExpireTime * int64(time.Second))).UnixMilli()
 		return val.Value, val.ExpireAt, nil
 	}
-	defer r.Logger.Sync()
 	return "", 0, errors.New("key does not exist")
 }
 
-// func (r Storage) GetKind(key string) (interface{}, error) {
-// 	defer r.Logger.Sync()
-// 	if r.CheckKeys(key) {
-// 		if _, okint := strconv.Atoi(r.InnerScalar[key].Value); okint == nil {
-// 			r.Logger.Info("key D sent")
-// 			return "D", nil
-// 		} else {
-// 			r.Logger.Info("key S sent")
-// 			return "S", nil
-// 		}
-// 	}
-// 	return "", errors.New("key does not exist")
-// }
-
 func (r Storage) GetKind(key string) (string, error) {
-	defer r.Logger.Sync()
 	if r.CheckKeys(key) {
 		return r.InnerScalar[key].Kind, nil
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"project_1/internal/storage/storage"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -50,10 +51,22 @@ func (r *Server) newApi() *gin.Engine {
 	arrayPoint.POST("/Lpop/:key", r.handlerLpopArr)        //+
 	arrayPoint.POST("/Rpop/:key", r.handlerRpopArr)        //+
 	arrayPoint.POST("/LSet/:key", r.handlerArrLSet)        //+
-	arrayPoint.GET("/LGet/:key", r.handlerArrLGet)         //+
-	arrayPoint.GET("/getArr/:key", r.handlerArrGet)        //+
+	arrayPoint.POST("/Expire/:key/:expireSeconds", r.handlerExpireSet)
+	arrayPoint.GET("/LGet/:key", r.handlerArrLGet)  //+
+	arrayPoint.GET("/getArr/:key", r.handlerArrGet) //+
 
 	return engine
+}
+
+func (r *Server) handlerExpireSet(ctx *gin.Context) {
+	key := ctx.Param(KeyParam)
+	expireAt, err := strconv.Atoi(ctx.Param("expireSeconds"))
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	r.storage.Expire(key, int64(expireAt))
+	ctx.AbortWithStatus(http.StatusOK)
 }
 
 type LGet struct {
@@ -80,7 +93,7 @@ func (r *Server) handlerArrLGet(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, LGet{Value: value}) //value
+	ctx.JSON(http.StatusOK, LGet{Value: value})
 }
 
 func (r *Server) handlerArrLSet(ctx *gin.Context) {
@@ -94,7 +107,6 @@ func (r *Server) handlerArrLSet(ctx *gin.Context) {
 
 	r.storage.LSet(key, uint64(v.ListInt[0]), v.Value)
 	ctx.AbortWithStatus(http.StatusOK)
-	r.storage.SaveToJSON(DataJson)
 }
 
 func (r *Server) handlerRpopArr(ctx *gin.Context) {
@@ -106,7 +118,9 @@ func (r *Server) handlerRpopArr(ctx *gin.Context) {
 		return
 	}
 
-	r.storage.Rpop(key, v.ListInt)
+	if _, err := r.storage.Rpop(key, v.ListInt[0], v.ListInt[1]); err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+	}
 }
 
 func (r *Server) handlerLpopArr(ctx *gin.Context) {
@@ -118,8 +132,9 @@ func (r *Server) handlerLpopArr(ctx *gin.Context) {
 		return
 	}
 
-	r.storage.Lpop(key, v.ListInt)
-	r.storage.SaveToJSON(DataJson)
+	if _, err := r.storage.Lpop(key, v.ListInt[0], v.ListInt[1]); err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+	}
 	ctx.AbortWithStatus(http.StatusOK)
 }
 
@@ -133,7 +148,6 @@ func (r *Server) handlerRaddtoset(ctx *gin.Context) {
 	}
 
 	r.storage.Raddtoset(key, v.List)
-	r.storage.SaveToJSON(DataJson)
 	ctx.AbortWithStatus(http.StatusOK)
 }
 
@@ -147,7 +161,6 @@ func (r *Server) handlerArrLpush(ctx *gin.Context) {
 	}
 
 	r.storage.Lpush(key, v.List, v.ExpireAt)
-	r.storage.SaveToJSON(DataJson)
 	ctx.Status(http.StatusOK)
 }
 
@@ -161,7 +174,6 @@ func (r *Server) handlerArrRpush(ctx *gin.Context) {
 	}
 
 	r.storage.Rpush(key, v.List, v.ExpireAt)
-	r.storage.SaveToJSON(DataJson)
 	ctx.Status(http.StatusOK)
 }
 
@@ -191,8 +203,26 @@ func (r *Server) HandlerSet(ctx *gin.Context) {
 	}
 
 	r.storage.Set(key, v.Value, v.ExpireAt)
-	r.storage.SaveToJSON(DataJson)
 	ctx.Status(http.StatusOK)
+}
+
+func (r *Server) HandlerScalarExpire(ctx *gin.Context) {
+	key := ctx.Param(KeyParam)
+	expireAt, err := strconv.Atoi(ctx.Param("expireSeconds"))
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	var v Entry
+	if err := json.NewDecoder(ctx.Request.Body).Decode(&v); err != nil {
+		ctx.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	r.storage.Set(key, v.Value, int64(expireAt))
+	ctx.AbortWithStatus(http.StatusOK)
+
 }
 
 type getValues struct {
@@ -202,7 +232,6 @@ type getValues struct {
 
 func (r *Server) HandlerGet(ctx *gin.Context) {
 	key := ctx.Param(KeyParam)
-
 	v, expire, err := r.storage.Get(key)
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
