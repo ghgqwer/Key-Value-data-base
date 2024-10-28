@@ -26,7 +26,7 @@ type Array struct {
 }
 
 type Hash struct {
-	value    map[string]string
+	Value    map[string]string
 	ExpireAt int64
 }
 
@@ -51,6 +51,30 @@ func NewStorage() (Storage, error) {
 		InnerKeys:    make(map[string]struct{}),
 		Logger:       Logger,
 	}, nil
+}
+
+func (r *Storage) Hset(key string, keyMap string, value string, expireTime int64) {
+	hash, exist := r.InnerHashmap[key]
+	if !exist {
+		hash = Hash{
+			Value:    make(map[string]string),
+			ExpireAt: expireTime,
+		}
+	}
+	hash.Value[keyMap] = value
+	r.InnerHashmap[key] = hash
+}
+
+func (r *Storage) Hget(key, keyMap string) (any, error) {
+	hashMap, ok := r.InnerHashmap[key]
+	if !ok {
+		return "", errors.New("undefind key")
+	}
+	value, ok := hashMap.Value[keyMap]
+	if !ok {
+		return "", errors.New("undefind hash key")
+	}
+	return value, nil
 }
 
 func (r Storage) GarbageCollection(closeChan <-chan struct{}, n time.Duration) {
