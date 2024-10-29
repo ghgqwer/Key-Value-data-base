@@ -12,6 +12,12 @@ import (
 )
 
 func main() {
+	serverPort, ok := os.LookupEnv("BASIC_SERVER_PORT")
+	if !ok {
+		fmt.Println("not port provided")
+		os.Exit(1)
+	}
+
 	store, err := storage.NewStorage()
 	if err != nil {
 		panic(err)
@@ -41,6 +47,6 @@ func main() {
 	}()
 
 	filework.ReadFromJSON(store, server.DataJson)
-	serv := server.New(":8090", &store)
+	serv := server.New(":"+serverPort, &store)
 	serv.Start()
 }
