@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"project_1/internal/filework"
 	"slices"
 	"sync"
 	"time"
@@ -97,15 +96,17 @@ func (r Storage) Cleaner(m *sync.Mutex) {
 		if value, ok := r.InnerScalar[key]; ok {
 			if realTime >= value.ExpireAt && value.ExpireAt != 0 {
 				delete(r.InnerScalar, key)
+				delete(r.InnerKeys, key)
 			}
 		}
 
 		if value, ok := r.InnerArray[key]; ok {
 			if realTime >= value.ExpireAt && value.ExpireAt != 0 {
 				delete(r.InnerArray, key)
+				delete(r.InnerKeys, key)
 			}
 		}
-		delete(r.InnerKeys, key)
+
 	}
 }
 
@@ -137,7 +138,7 @@ func (r *Storage) Expire(key string, expire int64) error {
 
 func (r *Storage) Lpush(key string, list []string, expireTime int64) ([]string, error) {
 	slices.Reverse(list)
-	if _, err := r.InnerScalar[key]; !err {
+	if _, ok := r.InnerScalar[key]; !ok {
 		if _, ok := r.InnerArray[key]; !ok {
 			if expireTime == 0 {
 				r.InnerArray[key] = Array{
@@ -150,23 +151,22 @@ func (r *Storage) Lpush(key string, list []string, expireTime int64) ([]string, 
 					ExpireAt: time.Now().Add(time.Duration(expireTime * int64(time.Second))).UnixMilli(),
 				}
 			}
-			r.InnerKeys[key] = struct{}{}
 			r.Logger.Info("List set")
-			return r.InnerArray[key].Values, nil
 		} else {
 			currentArray := r.InnerArray[key]
 			currentArray.Values = append(list, currentArray.Values...)
 			r.InnerArray[key] = currentArray
 			//r.InnerArray[key].Values = append(list, r.InnerArray[key].Values...)
 			r.Logger.Info("Values append in list in left")
-			return r.InnerArray[key].Values, nil
 		}
+		r.InnerKeys[key] = struct{}{}
+		return r.InnerArray[key].Values, nil
 	}
 	return nil, errors.New("key existed")
 }
 
 func (r Storage) Rpush(key string, list []string, expireTime int64) ([]string, error) {
-	if !r.CheckKeys(key) {
+	if _, ok := r.InnerKeys[key]; !ok {
 		if _, ok := r.InnerArray[key]; !ok {
 			if expireTime == 0 {
 				r.InnerArray[key] = Array{
@@ -179,17 +179,15 @@ func (r Storage) Rpush(key string, list []string, expireTime int64) ([]string, e
 					ExpireAt: time.Now().Add(time.Duration(expireTime * int64(time.Second))).UnixMilli(),
 				}
 			}
-			r.InnerKeys[key] = struct{}{}
 			r.Logger.Info("List set")
-			return r.InnerArray[key].Values, nil
 		} else {
 			currentArray := r.InnerArray[key]
 			currentArray.Values = append(currentArray.Values, list...)
 			r.InnerArray[key] = currentArray
-			//r.InnerArray[key].Values = append(list, r.InnerArray[key].Values...)
 			r.Logger.Info("Values append in list in left")
-			return r.InnerArray[key].Values, nil
 		}
+		r.InnerKeys[key] = struct{}{}
+		return r.InnerArray[key].Values, nil
 	}
 	return nil, errors.New("key existed")
 }
@@ -308,7 +306,7 @@ func (r *Storage) Set(key string, Value any, expireTime int64) error {
 	default:
 		Kind = "NonType"
 	}
-	if !r.CheckKeys(key) {
+	if _, ok := r.InnerKeys[key]; !ok {
 		if expireTime != 0 {
 			r.InnerScalar[key] = Scalar{
 				Value:    stringVal,
@@ -323,8 +321,8 @@ func (r *Storage) Set(key string, Value any, expireTime int64) error {
 			}
 		}
 		r.InnerKeys[key] = struct{}{}
+		return nil
 	}
-	defer filework.SaveToJSON(r, "data.json")
 	return errors.New("keys existed")
 }
 
@@ -341,13 +339,9 @@ func (r Storage) Get(key string) (string, int64, error) {
 }
 
 func (r Storage) GetKind(key string) (string, error) {
-	if r.CheckKeys(key) {
+	if _, ok := r.InnerKeys[key]; ok {
 		return r.InnerScalar[key].Kind, nil
 	}
 	return "", errors.New("key does not exist")
 }
 
-func (r Storage) CheckKeys(key string) bool {
-	_, exist := r.InnerKeys[key]
-	return exist
-}
