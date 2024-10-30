@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	Root_dict = "/Users/vadim/Desktop/golang/sixthLessson/BolshoiGolangProject"
+	Root_dict = "./"
 )
 
 func WriteAtomic(r interface{}, path string) error {

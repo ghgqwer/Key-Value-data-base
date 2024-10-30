@@ -4,14 +4,14 @@ COPY go.mod .
 COPY go.sum .
 RUN go mod download
 COPY . .
-RUN --mount=type=cache,target="/root/.cache/go-build" GOOS=linux GOARCH=amd64 go build -o /app/server /app/internal/server/server.go
+RUN --mount=type=cache,target="/root/.cache/go-build" GOOS=linux GOARCH=amd64 go build -o /app/server /app/cmd/main.go
+
 
 FROM ubuntu:22.04
-RUN mkdir /app
-WORKDIR /app
+RUN mkdir /result_app
+WORKDIR /result_app
 COPY --from=builder /app/server .
-RUN chmod +x /app/server
+RUN chmod +x /result_app/server
 
-ENTRYPOINT [ "/app/server" ]
-#alpine
-#CMD [ "./server" ] 
+ENTRYPOINT [ "/result_app/server" ]
+
