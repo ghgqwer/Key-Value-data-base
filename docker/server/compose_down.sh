@@ -1,1 +1,2 @@
-docker compose -f ./docker/server/server.yaml down --volumes
+docker compose -f ./docker/server/server.yaml down 
+#--volumes
