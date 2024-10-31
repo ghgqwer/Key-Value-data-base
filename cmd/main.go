@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"project_1/internal/filework"
@@ -21,6 +22,10 @@ func main() {
 	store, err := storage.NewStorage()
 	if err != nil {
 		panic(err)
+	}
+
+	if err := filework.ReadFromJSON(store, server.DataJson); err != nil {
+		log.Fatal(err)
 	}
 
 	closeChan := make(chan struct{})
@@ -46,7 +51,6 @@ func main() {
 		os.Exit(0) // Завершение программы
 	}()
 
-	filework.ReadFromJSON(store, server.DataJson)
 	serv := server.New(":"+serverPort, &store)
 	serv.Start()
 }

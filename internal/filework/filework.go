@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"project_1/internal/storage/storage"
 )
 
 var (
-	Root_dict = "./"
+	Root_dict = "/data/"
 )
 
-func WriteAtomic(r interface{}, path string) error {
+func WriteAtomic(r storage.Storage, path string) error {
 	b, err := json.Marshal(r)
 	if err != nil {
 		return err
@@ -31,7 +32,7 @@ func WriteAtomic(r interface{}, path string) error {
 	return os.Rename(tmpPathName, Root_dict+path)
 }
 
-func ReadFromJSON(r interface{}, path string) error {
+func ReadFromJSON(r storage.Storage, path string) error {
 	file_path := filepath.Join(Root_dict, path)
 	fromFile, err := os.ReadFile(file_path)
 	if err != nil {
@@ -46,15 +47,8 @@ func ReadFromJSON(r interface{}, path string) error {
 	return nil
 }
 
-func SaveToJSON(r interface{}, path string) error {
+func SaveToJSON(r storage.Storage, path string) error {
 	file_path := filepath.Join(Root_dict, path)
-	file, err := os.Create(file_path)
-	if err != nil {
-		fmt.Println("Error creating file", err)
-		return err
-	}
-	defer file.Close()
-
 	b, err := json.Marshal(r)
 	if err != nil {
 		fmt.Println("Error write file", err)

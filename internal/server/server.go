@@ -160,7 +160,9 @@ func (r *Server) handlerArrLpush(ctx *gin.Context) {
 		return
 	}
 
-	r.storage.Lpush(key, v.List, v.ExpireAt)
+	if _, err := r.storage.Lpush(key, v.List, v.ExpireAt); err != nil {
+		ctx.AbortWithStatus(http.StatusConflict)
+	}
 	ctx.Status(http.StatusOK)
 }
 
@@ -173,7 +175,10 @@ func (r *Server) handlerArrRpush(ctx *gin.Context) {
 		return
 	}
 
-	r.storage.Rpush(key, v.List, v.ExpireAt)
+	if _, err := r.storage.Rpush(key, v.List, v.ExpireAt); err != nil {
+		ctx.AbortWithStatus(http.StatusConflict)
+		return
+	}
 	ctx.Status(http.StatusOK)
 }
 
@@ -202,7 +207,10 @@ func (r *Server) HandlerSet(ctx *gin.Context) {
 		return
 	}
 
-	r.storage.Set(key, v.Value, v.ExpireAt)
+	if err := r.storage.Set(key, v.Value, v.ExpireAt); err != nil {
+		ctx.AbortWithStatus(http.StatusConflict)
+		return
+	}
 	ctx.Status(http.StatusOK)
 }
 

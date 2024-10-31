@@ -11,7 +11,6 @@ FROM ubuntu:22.04
 RUN mkdir /result_app
 WORKDIR /result_app
 COPY --from=builder /app/server .
-RUN chmod +x /result_app/server
-
+VOLUME [ "/data" ]
 ENTRYPOINT [ "/result_app/server" ]
 
