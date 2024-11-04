@@ -24,8 +24,8 @@ func TestSetGet(t *testing.T) {
 
 	for numb, c := range cases {
 		t.Run(strconv.Itoa(numb), func(t *testing.T) {
-			s.Set(c.key, c.value)
-			sValue, _ := s.Get(c.key)
+			s.Set(c.key, c.value, 0)
+			sValue, _, _ := s.Get(c.key)
 
 			if sValue != c.value {
 				t.Errorf("values not equal")
@@ -36,14 +36,14 @@ func TestSetGet(t *testing.T) {
 
 type TestCaseGetKind struct {
 	key   string
-	value interface{}
+	value string
 	kind  string
 }
 
 func TestGetKind(t *testing.T) {
 	cases := []TestCaseGetKind{
 		{"key1", "string_value", "S"},
-		{"key2", 23, "D"},
+		{"key2", "23", "D"},
 		{"key3", "", "S"},
 	}
 
@@ -54,7 +54,7 @@ func TestGetKind(t *testing.T) {
 
 	for numb, c := range cases {
 		t.Run(strconv.Itoa(numb), func(t *testing.T) {
-			s.Set(c.key, c.value)
+			s.Set(c.key, c.value, 0)
 			sValueKind, _ := s.GetKind(c.key)
 
 			if sValueKind != c.kind {
@@ -82,7 +82,7 @@ func BenchmarkGet(b *testing.B) {
 			if err != nil {
 				b.Errorf("new storage: %v", err)
 			}
-			s.Set(tCase.key, tCase.value)
+			s.Set(tCase.key, tCase.value, 0)
 			bb.ResetTimer()
 			for n := 0; n < b.N; n++ {
 				s.Get(tCase.key)
@@ -105,7 +105,7 @@ func BenchmarkSet(b *testing.B) {
 				b.Errorf("new storage: %v", err)
 			}
 			for n := 0; n < b.N; n++ {
-				s.Set(tCase.key, tCase.value)
+				s.Set(tCase.key, tCase.value, 0)
 			}
 		})
 	}
@@ -126,7 +126,7 @@ func BenchmarkSetGet(b *testing.B) {
 				b.Errorf("new storage: %v", err)
 			}
 			for n := 0; n < b.N; n++ {
-				s.Set(tCase.key, tCase.value)
+				s.Set(tCase.key, tCase.value, 0)
 				s.Get(tCase.key)
 			}
 		})

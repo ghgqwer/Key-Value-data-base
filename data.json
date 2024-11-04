@@ -1,1 +1,1 @@
-{"InnerString":{"":"Val","name":"Anton","string_val":"value1"},"InnerInt":{"int_val":123,"key1":23},"InnerArray":{"fifth":["67","2","3"],"first":["5","4","3","2","1"],"fourth":["1","7","8","9","10"],"second":["1","2","3","5","8","4","6"],"third":["3","4","10"]},"InnerKeys":{"":{},"fifth":{},"first":{},"fourth":{},"int_val":{},"key1":{},"name":{},"second":{},"string_val":{},"third":{}}}
+{"InnerScalar":{"3":{"value":"sdf","expireAt":12}},"InnerArray":{"3":{"values":["3","786","1","123","312","456","987","1","5"],"expireAt":10}},"InnerKeys":{"3":{}},"Logger":{}}

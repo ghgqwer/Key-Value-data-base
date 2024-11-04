@@ -2,78 +2,47 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"project_1/internal/storage/storage" 
+	"os"
+	"os/signal"
+	"project_1/internal/server"
+	"project_1/internal/storage/storage"
+	"syscall"
 )
 
 func main() {
-	s, err := storage.NewStorage()
+	store, err := storage.NewStorage()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-	err = s.ReadFromJSON("data.json")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func() {
-		err := s.SaveToJSON("data.json")
-		if err != nil {
-			log.Fatal(err)
+
+	// fmt.Println(store.Lpush("first", []string{"1", "2", "3"}, 10))
+	// fmt.Println(store.Rpush("first", []string{"1", "2", "3"}, 0))
+	// store.Raddtoset("first", []string{"1", "7"})
+	// fmt.Println(store.Check_arr("first"))
+	// //store.Raddtoset("first", []string{"1", "7", "123"})
+	// store.LSet("first", 0, "19")
+	// fmt.Println(store.LGet("first", 0))
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+
+	//gpt :D
+	go func() {
+		// Блокировка до получения сигнала
+		<-c
+		fmt.Println("Received shutdown signal")
+
+		// Сохранение данных в файл перед завершением
+		if err := store.SaveToJSON("data.json"); err != nil {
+			fmt.Printf("Error saving data: %v\n", err)
+		} else {
+			fmt.Println("Data saved to data.json")
 		}
+
+		os.Exit(0) // Завершение программы
 	}()
 
-	s.Set("name", "Anton")
-	s.Set("name", "Vadim")
-	fmt.Println(s.Get("name"))
-
-	fmt.Println(s.Get("pue"))
-
-	s.Set("key1", 23)
-	fmt.Println(s.Get("key1"))
-
-	s.Rpush("fifth", []string{"1", "2", "3"})
-	fmt.Println(s.Check_arr("fifth"))
-	s.LSet("fifth", 0, "67")
-	fmt.Println(s.Check_arr("fifth"))
-
-	s.Lpush("first", []string{"1", "2", "3"})
-	llst := s.Lpush("first", []string{"4", "5"})
-	s.Rpush("second", []string{"1"})
-	rlst := s.Rpush("second", []string{"2", "3"})
-	fmt.Println(llst, rlst)
-	s.Raddtoset("second", []string{"3", "5", "8", "4", "8", "6"})
-
-	s.Rpush("third", []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"})
-
-	fmt.Println(s.Check_arr("third"))
-	fisrt_step, _ := s.Lpop("third", 2)
-	fmt.Println(fisrt_step)
-	second_step, _ := s.Lpop("third", 2, -2)
-	fmt.Println(second_step)
-	fmt.Println(s.Check_arr("third"))
-
-	s.Rpush("fourth", []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"})
-	fmt.Println(s.Check_arr("fourth"))
-	first_deleted, _ := s.Rpop("fourth", 4, -2)
-	fmt.Println(first_deleted)
-	fmt.Println(s.Check_arr("fourth"))
-
-	s.Set("string_val", "value1")
-	s.Set("int_val", 123)
-	s.Set("", "Val")
-
-	res_str, _ := s.Get("string_val")
-	res_int, _ := s.Get("int_val")
-	res_unknown_val, _ := s.Get("unknown")
-	res_getkindstr, _ := s.GetKind("string_val")
-	res_getkindint, _ := s.GetKind("int_val")
-	res_getkind_unkonown, _ := s.GetKind("unknown")
-	fmt.Println(res_str, res_int, res_unknown_val)
-	fmt.Println(res_getkindstr, res_getkindint, res_getkind_unkonown)
-
-	err = s.WriteAtomic("data.json")
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	store.ReadFromJSON("data.json")
+	serv := server.New(":8090", &store)
+	serv.Start()
 }
