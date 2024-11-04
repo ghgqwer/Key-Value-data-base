@@ -1,14 +1,30 @@
 services:
-  basic_server:
+  postgres:
+    image: postgres:13.3
+    environment:
+      POSTGRES_DB: "core"
+      POSTGRES_USER: "username"
+      POSTGRES_PASSWORD: "password"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+
+  server:
+    depends_on:
+      - postgres
     image: server:0.0.1
     container_name: docker-server
     ports:
       - "8090:8090" 
     environment:
-      BASIC_SERVER_PORT: 8090 
+      BASIC_SERVER_PORT: 8090
+      POSTGRES: "postgresql://username:password@postgres:5432/core?sslmode=disable"
+      TIMELOOP: 5
+      #"postgresql://username:password@localhost:5432/core?sslmode=disable"
     volumes:
       - result_app:/data
 
 volumes:
+  postgres:
   result_app:
-  

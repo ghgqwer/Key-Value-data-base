@@ -9,6 +9,7 @@ import (
 )
 
 var (
+	//Root_dict = "/Users/vadim/Desktop/golang/eighthLesson/BolshoiGolangProject/"
 	Root_dict = "/data/"
 )
 
