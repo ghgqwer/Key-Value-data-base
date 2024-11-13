@@ -34,13 +34,17 @@ GET PUE
 (nil)
 GET number
 42
-SET key value [EX seconds]
+```
+
+#####SET key value [EX seconds]
 
 Устанавливает значение по ключу key равным value. Если value указано в кавычках - это строка, иначе это число.
 
-Пример:
+**Пример:**
+```plaintext
 
 SET key1 "value1" EX 20
 OK
 SET key2 value1 EX 20
 Requested value is not a number
+```
