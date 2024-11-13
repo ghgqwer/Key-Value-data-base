@@ -7,10 +7,6 @@
 
 ![sample_front](https://github.com/user-attachments/assets/e7521203-d98f-4bc9-91fc-4d5d275f9bdf)
 
-<p align="center">
- <img width="200px" src="https://github.com/jon/coolproject/raw/master/image/image.png](https://github.com/ghgqwer/Key-Value-data-base/blob/main/img/sample_front.jpeg" alt="qr"/>
-</p>
-
 ## Типы хранимых данных
 
 Все ключи в базе данных являются строками. Каждый ключ может иметь только одно значение, которое может быть одного из следующих типов:
