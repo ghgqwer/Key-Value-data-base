@@ -1,0 +1,16 @@
+FROM golang:1.23-bullseye AS builder 
+WORKDIR /app
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+COPY . .
+RUN --mount=type=cache,target="/root/.cache/go-build" GOOS=linux GOARCH=amd64 go build -o /app/server /app/cmd/main.go
+
+
+FROM ubuntu:22.04
+RUN mkdir /result_app
+WORKDIR /result_app
+COPY --from=builder /app/server .
+VOLUME [ "/data" ]
+ENTRYPOINT [ "/result_app/server" ]
+
