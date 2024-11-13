@@ -4,7 +4,9 @@
 
 Для удобства работы с базой данных реализован фронтенд, который демонстрирует пример работы со скалярами. Добавлен Swagger для всех эндпоинтов.
 
-![Иллюстрация к проекту]([https://github.com/jon/coolproject/raw/master/image/image.png](https://github.com/ghgqwer/Key-Value-data-base/blob/main/img/sample_front.jpeg))
+<p align="center">
+ <img src="[img.png](https://github.com/jon/coolproject/raw/master/image/image.png](https://github.com/ghgqwer/Key-Value-data-base/blob/main/img/sample_front.jpeg)" alt="qr"/>
+</p>
 
 ## Типы хранимых данных
 
