@@ -1,0 +1,99 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/array/expire/:key/:expireSeconds": {
+            "post": {
+                "description": "Установить время жизни значения по ключу",
+                "summary": "Время жизни значения",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Время жизни значения",
+                        "name": "time",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/array/getArr/:key": {
+            "get": {
+                "summary": "Получить списко по ключу",
+                "responses": {}
+            }
+        },
+        "/array/lGet/:key": {
+            "get": {
+                "summary": "Получить значение по индексу по ключу",
+                "responses": {}
+            }
+        },
+        "/array/lSet/:key": {
+            "get": {
+                "summary": "Установить значение по индексу по ключу",
+                "responses": {}
+            }
+        },
+        "/array/lpop/:key": {
+            "post": {
+                "summary": "Удалить значение по индексу по ключу слева",
+                "responses": {}
+            }
+        },
+        "/array/lpush/:key": {
+            "post": {
+                "summary": "Вставляет слева все значения по ключу",
+                "responses": {}
+            }
+        },
+        "/array/raddtoset/:key": {
+            "post": {
+                "summary": "Вставляет по ключу только уникальные значения в массив",
+                "responses": {}
+            }
+        },
+        "/array/rpop/:key": {
+            "post": {
+                "summary": "Удалить значение по индексу по ключу справа",
+                "responses": {}
+            }
+        },
+        "/array/rpush/:key": {
+            "post": {
+                "summary": "Вставляет справа все значения по ключу",
+                "responses": {}
+            }
+        },
+        "/scalar/get/:key": {
+            "get": {
+                "summary": "Получить скаляр по ключу",
+                "responses": {}
+            }
+        },
+        "/scalar/set/:key": {
+            "post": {
+                "description": "key in path, value in json",
+                "summary": "Установить скаляр по ключу",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name of the user",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Hello, {name}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

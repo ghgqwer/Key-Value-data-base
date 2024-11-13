@@ -1,16 +1,15 @@
 package filework
 
 import (
+	"BolshoiGolangProject/internal/storage/storage"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"project_1/internal/storage/storage"
 )
 
 var (
-	//Root_dict = "/Users/vadim/Desktop/golang/eighthLesson/BolshoiGolangProject/"
-	Root_dict = "/data/"
+	RootDict = "/data/"
 )
 
 func WriteAtomic(r storage.Storage, path string) error {
@@ -19,7 +18,7 @@ func WriteAtomic(r storage.Storage, path string) error {
 		return err
 	}
 	filename := filepath.Base(path)
-	tmpPathName := filepath.Join(Root_dict, filename+".tmp")
+	tmpPathName := filepath.Join(RootDict, filename+".tmp")
 
 	err = os.WriteFile(tmpPathName, b, 0o777)
 	if err != nil {
@@ -30,11 +29,11 @@ func WriteAtomic(r storage.Storage, path string) error {
 		os.Remove(tmpPathName)
 	}()
 
-	return os.Rename(tmpPathName, Root_dict+path)
+	return os.Rename(tmpPathName, RootDict+path)
 }
 
 func ReadFromJSON(r storage.Storage, path string) error {
-	file_path := filepath.Join(Root_dict, path)
+	file_path := filepath.Join(RootDict, path)
 	fromFile, err := os.ReadFile(file_path)
 	if err != nil {
 		return SaveToJSON(r, path)
@@ -49,7 +48,7 @@ func ReadFromJSON(r storage.Storage, path string) error {
 }
 
 func SaveToJSON(r storage.Storage, path string) error {
-	file_path := filepath.Join(Root_dict, path)
+	file_path := filepath.Join(RootDict, path)
 	b, err := json.Marshal(r)
 	if err != nil {
 		fmt.Println("Error write file", err)

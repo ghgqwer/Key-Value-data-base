@@ -1,1 +1,1 @@
-{"InnerScalar":{"check1":{"value":"123","Kind":"S","expireAt":0},"check2":{"value":"123","Kind":"S","expireAt":0},"check5":{"value":"123","Kind":"S","expireAt":0}},"InnerArray":{"check0":{"values":["1","2","3","4","5"],"expireAt":0},"check3":{"values":["1","2","3","4","5"],"expireAt":0},"check4":{"values":["1","2","3","4","5"],"expireAt":0}},"InnerHashmap":{},"InnerKeys":{"check0":{},"check1":{},"check2":{},"check3":{},"check4":{},"check5":{}},"Logger":{}}
+{"InnerScalar":{},"InnerArray":{},"InnerHashmap":{},"InnerKeys":{},"Logger":{}}

@@ -9,10 +9,17 @@ services:
       - "5432:5432"
     volumes:
       - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U username -d core"]
+      interval: 3s
+      timeout: 2s
+      retries: 2
+      
 
   server:
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     image: server:0.0.1
     container_name: docker-server
     ports:
@@ -21,10 +28,10 @@ services:
       BASIC_SERVER_PORT: 8090
       POSTGRES: "postgresql://username:password@postgres:5432/core?sslmode=disable"
       TIMELOOP: 5
-      #"postgresql://username:password@localhost:5432/core?sslmode=disable"
     volumes:
       - result_app:/data
 
 volumes:
   postgres:
   result_app:
+
