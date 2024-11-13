@@ -11,8 +11,6 @@ import (
 	"go.uber.org/zap"
 )
 
-//const deafultExpireTime = int64(0)
-
 type Scalar struct {
 	Value    string `json:"value"`
 	Kind     string
@@ -156,7 +154,6 @@ func (r *Storage) Lpush(key string, list []string, expireTime int64) ([]string, 
 			currentArray := r.InnerArray[key]
 			currentArray.Values = append(list, currentArray.Values...)
 			r.InnerArray[key] = currentArray
-			//r.InnerArray[key].Values = append(list, r.InnerArray[key].Values...)
 			r.Logger.Info("Values append in list in left")
 		}
 		r.InnerKeys[key] = struct{}{}
@@ -317,7 +314,7 @@ func (r *Storage) Set(key string, Value any, expireTime int64) error {
 			r.InnerScalar[key] = Scalar{
 				Value:    stringVal,
 				Kind:     Kind,
-				ExpireAt: 0, //deafultExpireTime
+				ExpireAt: 0,
 			}
 		}
 		r.InnerKeys[key] = struct{}{}
@@ -344,8 +341,3 @@ func (r Storage) GetKind(key string) (string, error) {
 	}
 	return "", errors.New("key does not exist")
 }
-
-// func (r Storage) CheckKeys(key string) bool {
-// 	_, exist := r.InnerKeys[key]
-// 	return exist
-// }

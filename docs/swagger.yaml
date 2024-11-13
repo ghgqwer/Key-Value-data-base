@@ -1,0 +1,64 @@
+info:
+  contact: {}
+paths:
+  /array/expire/:key/:expireSeconds:
+    post:
+      description: Установить время жизни значения по ключу
+      parameters:
+      - description: Время жизни значения
+        in: query
+        name: time
+        type: integer
+      responses: {}
+      summary: Время жизни значения
+  /array/getArr/:key:
+    get:
+      responses: {}
+      summary: Получить списко по ключу
+  /array/lGet/:key:
+    get:
+      responses: {}
+      summary: Получить значение по индексу по ключу
+  /array/lSet/:key:
+    get:
+      responses: {}
+      summary: Установить значение по индексу по ключу
+  /array/lpop/:key:
+    post:
+      responses: {}
+      summary: Удалить значение по индексу по ключу слева
+  /array/lpush/:key:
+    post:
+      responses: {}
+      summary: Вставляет слева все значения по ключу
+  /array/raddtoset/:key:
+    post:
+      responses: {}
+      summary: Вставляет по ключу только уникальные значения в массив
+  /array/rpop/:key:
+    post:
+      responses: {}
+      summary: Удалить значение по индексу по ключу справа
+  /array/rpush/:key:
+    post:
+      responses: {}
+      summary: Вставляет справа все значения по ключу
+  /scalar/get/:key:
+    get:
+      responses: {}
+      summary: Получить скаляр по ключу
+  /scalar/set/:key:
+    post:
+      description: key in path, value in json
+      parameters:
+      - description: Name of the user
+        in: query
+        name: name
+        type: string
+      responses:
+        "200":
+          description: Hello, {name}
+          schema:
+            type: string
+      summary: Установить скаляр по ключу
+swagger: "2.0"

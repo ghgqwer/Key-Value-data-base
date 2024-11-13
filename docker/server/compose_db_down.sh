@@ -1,0 +1,1 @@
+docker compose -f ./docker/server/dataBase.yaml down -v 

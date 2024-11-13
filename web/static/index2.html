@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Key-Value Store</title>
+    <style>
+        /* Основные стили для страницы */
+        body {
+            font-family: Arial, sans-serif; /* Шрифт страницы */
+            background-color: #f4f4f4; /* Цвет фона страницы */
+            margin: 0; /* Убираем отступы вокруг страницы */
+            padding: 20px; /* Отступы внутри страницы */
+        }
+        h1 {
+            text-align: center; /* Центрируем заголовок */
+            color: #333; /* Цвет заголовка */
+        }
+        .container {
+            max-width: 600px; /* Максимальная ширина контейнера */
+            margin: 0 auto; /* Центрируем контейнер */
+            background: #fff; /* Белый фон для контейнера */
+            padding: 20px; /* Отступы внутри контейнера */
+            border-radius: 8px; /* Закругляем углы контейнера */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Тень вокруг контейнера */
+        }
+        .section {
+            margin-bottom: 20px; /* Отступ снизу для секций */
+        }
+        input[type="text"] {
+            width: 100%; /* Ширина поля ввода */
+            padding: 10px; /* Отступы внутри поля ввода */
+            margin: 10px 0; /* Отступы сверху и снизу для поля ввода */
+            border: 1px solid #ddd; /* Цвет границы поля ввода */
+            border-radius: 4px; /* Закругляем углы поля ввода */
+        }
+        button {
+            background-color: #5cb85c; /* Цвет кнопки */
+            color: white; /* Цвет текста кнопки */
+            padding: 10px 15px; /* Отступы внутри кнопки */
+            border: none; /* Убираем границу кнопки */
+            border-radius: 4px; /* Закругляем углы кнопки */
+            cursor: pointer; /* Меняем курсор при наведении на кнопку */
+            width: 100%; /* Ширина кнопки */
+        }
+        button:hover {
+            background-color: #4cae4c; /* Цвет кнопки при наведении */
+        }
+        alert {
+            display: none; /* Скрываем предупреждения (если бы использовались) */
+        }
+    </style>
+    <script>
+        // Функция для установки значения по ключу
+        async function setKeyValue() {
+            // Получаем ключ и значение из полей ввода
+            const key = document.getElementById('setKey').value;
+            const value = document.getElementById('setValue').value;
+
+            // Отправляем POST-запрос на бэкенд для установки значения по ключу
+            const response = await fetch(`/scalar/set/${key}`, {
+                method: 'POST', // Указываем метод запроса
+                headers: {
+                    'Content-Type': 'application/json', // Указываем тип контента
+                },
+                // Передаем значение в теле запроса в формате JSON
+                body: JSON.stringify({ value }),
+            });
+
+            // Получаем ответ от сервера и показываем его в виде alert
+            const result = await response.text();
+            alert(`Result: ${result}`);
+        }
+
+        // Функция для получения значения по ключу
+        async function getValue() {
+            // Получаем ключ из поля ввода
+            const key = document.getElementById('getKey').value;
+
+            // Отправляем GET-запрос на бэкенд для получения значения по ключу
+            const response = await fetch(`/scalar/get/${key}`);
+            // Получаем ответ от сервера и показываем его в виде alert
+            const result = await response.text();
+            alert(`Value: ${result}`);
+        }
+    </script>
+</head>
+<body>
+    <h1>Simple Key-Value Store</h1>
+    <div class="container">
+        <div class="section">
+            <h2>Установить значение</h2>
+            <!-- Поле ввода для ключа -->
+            <input type="text" id="setKey" placeholder="Ключ" />
+            <!-- Поле ввода для значения -->
+            <input type="text" id="setValue" placeholder="Значение" />
+            <!-- Кнопка для установки значения -->
+            <button onclick="setKeyValue()">Установить</button>
+        </div>
+
+        <div class="section">
+            <h2>Получить значение</h2>
+            <!-- Поле ввода для ключа -->
+            <input type="text" id="getKey" placeholder="Ключ" />
+            <!-- Кнопка для получения значения -->
+            <button onclick="getValue()">Получить</button>
+        </div>
+    </div>
+</body>
+</html>

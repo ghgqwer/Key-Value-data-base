@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Key-Value Store</title>
+    <style>
+        /* Основные стили для страницы */
+        body {
+            font-family: Arial, sans-serif; /* Шрифт страницы */
+            background-color: #f4f4f4; /* Цвет фона страницы */
+            margin: 0; /* Убираем отступы вокруг страницы */
+            padding: 20px; /* Отступы внутри страницы */
+        }
+        h1 {
+            text-align: center; /* Центрируем заголовок */
+            color: #333; /* Цвет заголовка */
+        }
+        .container {
+            max-width: 600px; /* Максимальная ширина контейнера */
+            margin: 0 auto; /* Центрируем контейнер */
+            background: #fff; /* Белый фон для контейнера */
+            padding: 20px; /* Отступы внутри контейнера */
+            border-radius: 8px; /* Закругляем углы контейнера */
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Тень вокруг контейнера */
+        }
+        .section {
+            margin-bottom: 20px; /* Отступ снизу для секций */
+        }
+        input[type="text"] {
+            width: 100%; /* Ширина поля ввода */
+            padding: 10px; /* Отступы внутри поля ввода */
+            margin: 10px 0; /* Отступы сверху и снизу для поля ввода */
+            border: 1px solid #ddd; /* Цвет границы поля ввода */
+            border-radius: 4px; /* Закругляем углы поля ввода */
+        }
+        button {
+            background-color: #5cb85c; /* Цвет кнопки */
+            color: white; /* Цвет текста кнопки */
+            padding: 10px 15px; /* Отступы внутри кнопки */
+            border: none; /* Убираем границу кнопки */
+            border-radius: 4px; /* Закругляем углы кнопки */
+            cursor: pointer; /* Меняем курсор при наведении на кнопку */
+            width: 100%; /* Ширина кнопки */
+        }
+        button:hover {
+            background-color: #4cae4c; /* Цвет кнопки при наведении */
+        }
+        .result-display {
+            padding: 10px; /* Отступы внутри поля для вывода */
+            border-radius: 4px; /* Закругляем углы */
+            margin-top: 10px; /* Отступ сверху */
+            border: 1px solid transparent; /* По умолчанию прозрачная граница */
+        }
+        .result-display.error {
+            border: 1px solid #a94442; /* Красная граница для ошибки */
+            background-color: #f2dede; /* Красный фон для ошибки */
+            color: #a94442; /* Цвет текста для ошибки */
+        }
+        .result-display.success {
+            border: 1px solid #4cae4c; /* Зеленая граница для успеха */
+            background-color: #dff0d8; /* Зеленый фон для успешного сообщения */
+            color: #3c763d; /* Цвет текста для успешного сообщения */
+        }
+    </style>
+    <script>
+        // Функция для отображения сообщения с учетом времени жизни на экране
+        function showMessage(message, isSuccess) {
+            const resultDisplay = document.getElementById('resultDisplay');
+            resultDisplay.innerText = message; // Устанавливаем текст сообщения
+            resultDisplay.className = `result-display ${isSuccess ? 'success' : 'error'}`; // Устанавливаем класс для стиля
+            
+            // Скрываем сообщение через 5 секунд
+            setTimeout(() => {
+                resultDisplay.innerText = ""; // Очищаем текст
+                resultDisplay.className = "result-display"; // Сбрасываем класс
+            }, 5000);
+        }
+
+        // Функция для установки значения по ключу
+        async function setKeyValue() {
+            const key = document.getElementById('setKey').value;
+            const value = document.getElementById('setValue').value;
+            const expire = document.getElementById('expire').value;
+
+            const payload = {
+                value: value,
+                ExpireAt: expire ? parseInt(expire) : null
+            };
+
+            try {
+                const response = await fetch(`/scalar/set/${key}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                const result = await response.text();
+                if (response.ok) {
+                    // Успешное значение
+                    showMessage("Готово!", true);
+                } else {
+                    // Ошибка при установке
+                    showMessage(`Ошибка: ${result}`, false);
+                }
+            } catch (error) {
+                // Ошибка при выполнении запроса
+                showMessage(`Ошибка: ${error.message}`, false);
+            } finally {
+                // Очищаем поля ввода после попытки установить значение
+                document.getElementById('setKey').value = "";
+                document.getElementById('setValue').value = "";
+                document.getElementById('expire').value = "";
+            }
+        }
+
+        // Функция для получения значения по ключу
+        async function getValue() {
+            const key = document.getElementById('getKey').value;
+
+            try {
+                const response = await fetch(`/scalar/get/${key}`);
+                const result = await response.json(); // Парсим ответ как JSON
+
+                if (!response.ok) {
+                    // Если страница возвращает ошибку, показываем сообщение об ошибке
+                    showMessage("Значение отсутствует", false); // Выводим сообщение при отсутствии значения
+                    document.getElementById('getKey').classList.add('error-input'); // Добавляем класс ошибки к полю ввода
+                } else {
+                    // Если значение получено успешно
+                    showMessage(`Значение: "${result.Value}"`, true); // Выводим успешное значение
+                    document.getElementById('getKey').classList.remove('error-input'); // Убираем класс ошибки
+                }
+            } catch (error) {
+                showMessage("Ошибка при получении значения", false); // Сообщение об ошибке
+                document.getElementById('getKey').classList.add('error-input'); // Добавляем класс ошибки к полю ввода
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Simple Key-Value Store</h1>
+    <div class="container">
+        <div id="alertBox" class="alert"></div> <!-- Уведомление -->
+        <div class="section">
+            <h2>Установить значение</h2>
+            <input type="text" id="setKey" placeholder="Ключ" required />
+            <input type="text" id="setValue" placeholder="Значение" required />
+            <input type="text" id="expire" placeholder="Время истечения (необязательно)" />
+            <button onclick="setKeyValue()">Установить</button>
+        </div>
+
+        <div class="section">
+            <h2>Получить значение</h2>
+            <input type="text" id="getKey" placeholder="Ключ" />
+            <button onclick="getValue()">Получить</button>
+            <div id="resultDisplay" class="result-display"></div> <!-- Поле для отображения результата -->
+        </div>
+    </div>
+</body>
+</html>

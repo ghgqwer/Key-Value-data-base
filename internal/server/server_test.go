@@ -1,12 +1,12 @@
 package server
 
 import (
+	"BolshoiGolangProject/internal/storage/storage"
 	"bytes"
 	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"project_1/internal/storage/storage"
 	"strconv"
 	"sync"
 	"testing"
@@ -221,14 +221,6 @@ func TestLpop(t *testing.T) {
 		t.Errorf("value doesnt delete: %v", err)
 	}
 }
-
-//create recorder
-//create server
-//create router
-
-//create request
-//write down response
-//asserts
 
 type ValueBench struct {
 	ExpireAt int64
