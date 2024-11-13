@@ -1,0 +1,14 @@
+services:
+  basic_server:
+    image: server:0.0.1
+    container_name: docker-server
+    ports:
+      - "8090:8090" 
+    environment:
+      BASIC_SERVER_PORT: 8090 
+    volumes:
+      - result_app:/data
+
+volumes:
+  result_app:
+  
