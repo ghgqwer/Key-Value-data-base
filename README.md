@@ -35,8 +35,7 @@ GET PUE
 GET number
 42
 ```
-##### GET key
-#####SET key value [EX seconds]
+##### SET key value [EX seconds]
 
 Устанавливает значение по ключу key равным value. Если value указано в кавычках - это строка, иначе это число.
 
