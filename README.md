@@ -194,4 +194,4 @@ Requested value is not a number
 
 ## Docker-compose
 
-Для развертывания приложения и базы данных Postgres используйте docker-compose.
+Для развертывания приложения и базы данных Postgres используйте docker + docker-compose.
