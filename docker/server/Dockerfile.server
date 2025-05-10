@@ -11,6 +11,8 @@ FROM ubuntu:22.04
 RUN mkdir /result_app
 WORKDIR /result_app
 COPY --from=builder /app/server .
+COPY --from=builder /app/web /app/web
+COPY --from=builder /app/docs /app/docs 
 VOLUME [ "/data" ]
 ENTRYPOINT [ "/result_app/server" ]
 
